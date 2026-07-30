@@ -377,16 +377,16 @@ function renderMobileDrive() {
         ${track.map((routeSpace, index) => {
           const bottom = 24 + index * 48;
           const width = Math.max(39, 96 - index * 9);
+          const fontSize = Math.max(8, 12 - index * 0.65);
           const isCurrent = index === 0;
-          return `<div class="mobile-road-tile ${isCurrent ? "is-current" : ""}" style="--tile-bottom:${bottom}px;--tile-width:${width}%">
+          return `<div class="mobile-road-tile ${isCurrent ? "is-current" : ""}" style="--tile-bottom:${bottom}px;--tile-width:${width}%;--tile-font:${fontSize}px">
             <span class="mobile-road-tile-icon">${routeSpace.icon}</span>
             <strong>${escapeHtml(routeSpace.label)}</strong>
-            ${isCurrent ? `<span class="mobile-road-car ${state.isBusy ? "is-stepping" : ""}" style="--car:${player.color}" aria-label="${escapeHtml(player.name)}のオープンカー">🚙</span>` : ""}
           </div>`;
         }).join("")}
       </div>
+      <div class="mobile-rear-car ${state.isBusy ? "is-stepping" : ""}" aria-hidden="true"><img src="assets/mobile-rear-car.png" alt="" /></div>
       <div class="mobile-drive-progress" aria-label="ゴールまでの進行度 ${progress}%"><span style="width:${progress}%"></span></div>
-      <div class="mobile-drive-location"><span>${space.icon}</span><strong>${escapeHtml(space.label)}</strong><small>${escapeHtml(space.sub)} · ${player.steps}マス目</small></div>
     </div>`;
 }
 
@@ -528,6 +528,10 @@ function rollDice() {
   window.setTimeout(() => moveStep(state.dice), 520);
 }
 
+function movementStepDelay() {
+  return window.matchMedia("(max-width: 760px)").matches ? 330 : 190;
+}
+
 function moveStep(remaining) {
   const player = currentPlayer();
   const nextId = nextSpaceId(player);
@@ -548,7 +552,7 @@ function moveStep(remaining) {
     });
     return;
   }
-  window.setTimeout(() => moveStep(remaining - 1), 190);
+  window.setTimeout(() => moveStep(remaining - 1), movementStepDelay());
 }
 
 function resolveFamilyEvent(player, space) {
@@ -622,7 +626,7 @@ function continueAfterLifeEvent() {
     return;
   }
   if (Number.isInteger(pendingEvent.resumeSteps)) {
-    window.setTimeout(() => moveStep(pendingEvent.resumeSteps), 190);
+    window.setTimeout(() => moveStep(pendingEvent.resumeSteps), movementStepDelay());
     return;
   }
   finishTurn();
@@ -635,7 +639,7 @@ function giftAmountFor(roll) {
 function startGiftCollection(recipientId, { celebration }, resumeSteps = null) {
   const payerIds = state.players.filter((player) => player.id !== recipientId).map((player) => player.id);
   if (!payerIds.length) {
-    if (Number.isInteger(resumeSteps)) window.setTimeout(() => moveStep(resumeSteps), 190);
+    if (Number.isInteger(resumeSteps)) window.setTimeout(() => moveStep(resumeSteps), movementStepDelay());
     else finishTurn();
     return;
   }
@@ -733,7 +737,7 @@ function continueGiftCollection() {
   toast(`${recipient.name}さん、おめでとう！`);
   render();
   if (Number.isInteger(gift.resumeSteps)) {
-    window.setTimeout(() => moveStep(gift.resumeSteps), 190);
+    window.setTimeout(() => moveStep(gift.resumeSteps), movementStepDelay());
     return;
   }
   finishTurn();

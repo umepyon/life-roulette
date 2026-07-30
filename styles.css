@@ -153,34 +153,32 @@ footer { display: flex; justify-content: space-between; padding: 24px 4px 30px; 
   .board-panel { overflow: hidden; }
   .board-panel .board-frame, .board-panel .board-caption { display: none; }
   .mobile-drive-view { display: block; }
-  .mobile-drive-hud { position: absolute; z-index: 2; top: 13px; right: 13px; left: 13px; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, .4); border-radius: 13px; color: white; background: linear-gradient(120deg, rgba(18, 28, 83, .82), rgba(45, 82, 145, .56)); box-shadow: 0 7px 18px rgba(10, 24, 69, .18); text-shadow: 0 1px 2px rgba(13, 21, 61, .55); }
-  .mobile-drive-hud span, .mobile-drive-hud strong { display: block; }.mobile-drive-hud strong { margin: 2px 0 3px; font-size: 15px; }.mobile-drive-hud strong i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border: 2px solid white; border-radius: 50%; }.mobile-drive-hud span:last-child { font-size: 10px; font-weight: 800; }.mobile-drive-kicker { color: #ffe891; font-family: Georgia, serif; font-size: 8px; letter-spacing: .18em; }
-  .mobile-drive-progress { position: absolute; z-index: 2; right: 16px; bottom: 77px; left: 16px; height: 7px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .6); box-shadow: 0 1px 3px rgba(13, 21, 61, .25); }.mobile-drive-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #735bdd, #ffca57); transition: width .45s ease; }
-  .mobile-drive-location { position: absolute; z-index: 2; right: 14px; bottom: 14px; left: 14px; display: grid; grid-template-columns: 31px 1fr; gap: 1px 8px; align-items: center; padding: 9px 11px; border-radius: 13px; color: white; background: rgba(22, 37, 76, .75); backdrop-filter: blur(5px); }.mobile-drive-location > span { grid-row: span 2; font-size: 25px; }.mobile-drive-location strong { font-size: 13px; }.mobile-drive-location small { color: #dce7ff; font-size: 9px; font-weight: 800; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-}
-
-@media (max-width: 760px) {
-  .mobile-drive-scene { min-height: min(122vw, 540px); background: linear-gradient(#80c9f8 0 34%, #79bd73 34% 100%); }
-  .mobile-drive-scene::before { z-index: 0; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .2) 0 2px, transparent 2px 31px), linear-gradient(180deg, transparent 0 32%, rgba(27, 103, 83, .14) 32% 100%); transform: none; }
-  .mobile-drive-scene--women::before { background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, .2) 0 2px, transparent 2px 31px), linear-gradient(180deg, transparent 0 32%, rgba(27, 103, 83, .14) 32% 100%); }
-  .mobile-drive-view.is-moving .mobile-drive-scene::before { animation: none; }
-  .mobile-drive-speed-lines { display: none; }
-  .mobile-drive-hud { z-index: 3; }
-  .mobile-tile-road { position: absolute; z-index: 1; inset: 75px 0 66px; overflow: hidden; }
-  .mobile-road-tile { position: absolute; bottom: var(--tile-bottom); left: 50%; display: flex; width: var(--tile-width); height: 42px; align-items: center; justify-content: center; gap: 5px; border: 2px solid rgba(75, 96, 150, .52); border-radius: 9px; color: #45425d; background: linear-gradient(135deg, #fffce7, #f3edca); box-shadow: 0 5px 0 rgba(46, 66, 104, .24), 0 9px 15px rgba(45, 84, 72, .13); transform: translateX(-50%) perspective(250px) rotateX(4deg); transform-origin: bottom; }
-  .mobile-road-tile:nth-child(even) { background: linear-gradient(135deg, #f2f3ff, #dfe1f8); }
+  .mobile-drive-scene { position: relative; isolation: isolate; min-height: min(132vw, 575px); overflow: hidden; border-radius: 16px; background: linear-gradient(180deg, #81c9f8 0 29%, #6fae6a 29% 33%, #8d9eb7 33% 100%); box-shadow: inset 0 -24px 38px rgba(20, 32, 71, .2); }
+  .mobile-drive-scene::before { content: ""; position: absolute; z-index: 0; inset: 29% 0 0; background: linear-gradient(90deg, rgba(42, 108, 72, .35), transparent 15% 85%, rgba(42, 108, 72, .35)), repeating-linear-gradient(90deg, transparent 0 48px, rgba(255, 255, 255, .15) 48px 50px); pointer-events: none; }
+  .mobile-drive-hud { position: absolute; z-index: 3; top: 13px; right: 13px; left: 13px; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, .4); border-radius: 13px; color: white; background: linear-gradient(120deg, rgba(18, 28, 83, .82), rgba(45, 82, 145, .56)); box-shadow: 0 7px 18px rgba(10, 24, 69, .18); text-shadow: 0 1px 2px rgba(13, 21, 61, .55); }
+  .mobile-drive-hud span, .mobile-drive-hud strong { display: block; }
+  .mobile-drive-hud strong { margin: 2px 0 3px; font-size: 15px; }
+  .mobile-drive-hud strong i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border: 2px solid white; border-radius: 50%; }
+  .mobile-drive-hud span:last-child { font-size: 10px; font-weight: 800; }
+  .mobile-drive-kicker { color: #ffe891; font-family: Georgia, serif; font-size: 8px; letter-spacing: .18em; }
+  .mobile-drive-progress { position: absolute; z-index: 3; top: 76px; right: 16px; left: 16px; height: 7px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .6); box-shadow: 0 1px 3px rgba(13, 21, 61, .25); }
+  .mobile-drive-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #735bdd, #ffca57); transition: width .45s ease; }
+  .mobile-tile-road { position: absolute; z-index: 1; inset: 88px 0 0; overflow: hidden; }
+  .mobile-drive-view.is-moving .mobile-tile-road { animation: mobile-road-step .3s ease-out both; }
+  .mobile-road-tile { position: absolute; bottom: var(--tile-bottom); left: 50%; display: flex; width: var(--tile-width); height: 45px; align-items: center; justify-content: center; gap: 5px; border: 2px solid rgba(55, 65, 112, .72); border-radius: 9px; color: #45425d; background: linear-gradient(135deg, #fffef3, #d9e3ef); box-shadow: 0 5px 0 rgba(46, 66, 104, .24), 0 9px 15px rgba(45, 84, 72, .13); transform: translateX(-50%) perspective(250px) rotateX(4deg); transform-origin: bottom; }
+  .mobile-road-tile:nth-child(even) { background: linear-gradient(135deg, #edf6ff, #cbd7e8); }
   .mobile-road-tile::after { content: ""; position: absolute; right: 9px; bottom: -13px; left: 9px; height: 13px; border: 2px solid rgba(75, 96, 150, .42); border-top: 0; border-radius: 0 0 7px 7px; background: #b8b9de; transform: skewX(-13deg); transform-origin: top; }
-  .mobile-road-tile.is-current { z-index: 2; border-color: var(--purple); color: var(--purple-dark); background: linear-gradient(135deg, #fff7c8, #ffe69a); box-shadow: 0 6px 0 #d6a841, 0 11px 16px rgba(77, 55, 123, .2); }
-  .mobile-road-tile-icon { font-size: 17px; }.mobile-road-tile strong { overflow: hidden; max-width: 62%; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .mobile-road-car { position: absolute; z-index: 4; bottom: -18px; left: 50%; filter: drop-shadow(0 4px 2px rgba(20, 27, 60, .28)); font-size: 39px; line-height: 1; transform: translateX(-50%); }
-  .mobile-road-car.is-stepping { animation: mobile-tile-hop .19s ease-out both; }
-  .mobile-drive-progress, .mobile-drive-location { z-index: 3; }
-  @keyframes mobile-tile-hop { from { opacity: .35; transform: translate(-50%, 44px) scale(.8); } 75% { opacity: 1; transform: translate(-50%, -7px) scale(1.08); } to { transform: translate(-50%, 0) scale(1); } }
+  .mobile-road-tile.is-current { z-index: 2; border-color: var(--purple); color: var(--purple-dark); background: linear-gradient(135deg, #fff6bd, #f6cb69); box-shadow: 0 6px 0 #d6a841, 0 11px 16px rgba(77, 55, 123, .2); }
+  .mobile-road-tile-icon { font-size: 17px; }
+  .mobile-road-tile strong { overflow: hidden; max-width: 62%; font-size: var(--tile-font); text-overflow: ellipsis; white-space: nowrap; }
+  /* PNG の透明な余白を含めても、車体のタイヤが画面下に近づく位置。 */
+  .mobile-rear-car { position: absolute; z-index: 4; bottom: -24px; left: 50%; width: min(72%, 278px); filter: drop-shadow(0 12px 7px rgba(11, 22, 54, .32)); transform: translateX(-50%); pointer-events: none; }
+  .mobile-rear-car img { display: block; width: 100%; height: auto; }
+  .mobile-rear-car.is-stepping { animation: mobile-car-bob .3s ease-out both; }
+  @keyframes mobile-road-step { from { opacity: .74; transform: translateY(-48px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes mobile-car-bob { from { transform: translate(-50%, 10px) scale(.96); } 60% { transform: translate(-50%, -7px) scale(1.025); } to { transform: translate(-50%, 0) scale(1); } }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mobile-road-car.is-stepping { animation: none; }
+  .mobile-drive-view.is-moving .mobile-tile-road, .mobile-rear-car.is-stepping { animation: none; }
 }
