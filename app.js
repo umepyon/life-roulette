@@ -341,6 +341,19 @@ function renderCurrentPlayer() {
   elements.rollHint.textContent = state.isBusy ? "オープンカーがマス目を進んでいます…" : next ? `次は「${next.label}」の方向へ。` : "分岐で行き先を選んでください。";
 }
 
+function mobileRoutePreview(player, count = 7) {
+  const spaces = [];
+  let space = currentSpace(player);
+  for (let index = 0; space && index < count; index += 1) {
+    spaces.push(space);
+    const nextId = space.routeOptions
+      ? player.routes[space.id] || space.routeOptions[0]?.next
+      : space.next;
+    space = nextId ? SPACE_BY_ID[nextId] : null;
+  }
+  return spaces;
+}
+
 function renderMobileDrive() {
   const player = currentPlayer();
   if (!player) {
@@ -349,20 +362,31 @@ function renderMobileDrive() {
     return;
   }
   const space = currentSpace(player);
-  const profile = characterProfile(player.characterId);
   const progress = Math.min(100, Math.round((player.steps / 34) * 100));
-  const drivingMessage = state.isBusy ? `サイコロの目 ${state.dice}。${state.dice}マス走行中！` : `いまは「${space.label}」を走行中`;
+  const drivingMessage = state.isBusy ? `サイコロの目 ${state.dice}。1マスずつ進行中！` : `いまは「${space.label}」にいます`;
+  const track = mobileRoutePreview(player);
   elements.mobileDriveView.classList.toggle("is-moving", state.isBusy);
   elements.mobileDriveView.innerHTML = `
-    <div class="mobile-drive-scene ${profile.gender === "女性" ? "mobile-drive-scene--women" : ""}" role="img" aria-label="${escapeHtml(player.name)}がオープンカーで道路を走るドライブビュー">
-      <div class="mobile-drive-speed-lines" aria-hidden="true"></div>
+    <div class="mobile-drive-scene" role="img" aria-label="${escapeHtml(player.name)}が四角いマス目の道を進むドライブビュー">
       <div class="mobile-drive-hud">
-        <span class="mobile-drive-kicker">DRIVE VIEW</span>
-        <strong><i style="background:${player.color}"></i>${escapeHtml(player.name)}のドライブ</strong>
+        <span class="mobile-drive-kicker">MOBILE DRIVE BOARD</span>
+        <strong><i style="background:${player.color}"></i>${escapeHtml(player.name)}の番</strong>
         <span>${escapeHtml(drivingMessage)}</span>
       </div>
+      <div class="mobile-tile-road">
+        ${track.map((routeSpace, index) => {
+          const bottom = 24 + index * 48;
+          const width = Math.max(39, 96 - index * 9);
+          const isCurrent = index === 0;
+          return `<div class="mobile-road-tile ${isCurrent ? "is-current" : ""}" style="--tile-bottom:${bottom}px;--tile-width:${width}%">
+            <span class="mobile-road-tile-icon">${routeSpace.icon}</span>
+            <strong>${escapeHtml(routeSpace.label)}</strong>
+            ${isCurrent ? `<span class="mobile-road-car ${state.isBusy ? "is-stepping" : ""}" style="--car:${player.color}" aria-label="${escapeHtml(player.name)}のオープンカー">🚙</span>` : ""}
+          </div>`;
+        }).join("")}
+      </div>
       <div class="mobile-drive-progress" aria-label="ゴールまでの進行度 ${progress}%"><span style="width:${progress}%"></span></div>
-      <div class="mobile-drive-location"><span>${space.icon}</span><strong>${escapeHtml(space.label)}</strong><small>${escapeHtml(space.sub)}</small></div>
+      <div class="mobile-drive-location"><span>${space.icon}</span><strong>${escapeHtml(space.label)}</strong><small>${escapeHtml(space.sub)} · ${player.steps}マス目</small></div>
     </div>`;
 }
 
