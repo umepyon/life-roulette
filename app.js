@@ -281,7 +281,7 @@ function startGame(event) {
     const entered = String(formData.get(`player-${index}`) || "").trim();
     return entered || DEFAULT_NAMES[index];
   });
-  state.setupNames = [...names, ...DEFAULT_NAMES].slice(0, 4);
+  state.setupNames = Array.from({ length: 4 }, (_, index) => names[index] || state.setupNames[index] || DEFAULT_NAMES[index]);
   state.players = names.map((name, index) => ({
     id: index,
     name,
