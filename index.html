@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#15173d" />
+    <meta
+      name="description"
+      content="最大4人で遊べる、ブラウザ向け人生すごろくゲーム"
+    />
+    <title>人生ルーレット | みんなで遊ぶ人生すごろく</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <div class="app-shell">
+      <header class="site-header">
+        <a class="brand" href="#game" aria-label="人生ルーレットのトップへ">
+          <span class="brand-mark">人生</span>
+          <span>
+            <strong>ルーレット</strong>
+            <small>みんなで遊ぶ人生すごろく</small>
+          </span>
+        </a>
+        <div class="header-actions">
+          <button class="text-button" id="help-button" type="button">遊び方</button>
+          <button class="new-game-button" id="new-game-button" type="button">新しいゲーム</button>
+        </div>
+      </header>
+
+      <main id="game" class="game-page">
+        <section class="game-intro" aria-labelledby="game-title">
+          <div>
+            <p class="eyebrow">LOCAL MULTIPLAYER · 2–4 PLAYERS</p>
+            <h1 id="game-title">今日から、わたしたちの人生。</h1>
+            <p>サイコロを振って、出会いと選択を重ねよう。<br />ゴールでいちばん資産を残した人の勝ち。</p>
+          </div>
+          <div class="intro-badges" aria-label="ゲームの特徴">
+            <span>🎲 ひとつの画面で</span>
+            <span>👫 最大4人</span>
+            <span>⏱ 約10分</span>
+          </div>
+        </section>
+
+        <section class="game-layout" aria-label="人生ルーレットのゲーム画面">
+          <aside class="panel player-panel" aria-labelledby="players-heading">
+            <div class="panel-heading">
+              <p class="eyebrow">PLAYERS</p>
+              <h2 id="players-heading">いまの人生</h2>
+            </div>
+            <div id="player-list" class="player-list"></div>
+            <div class="panel-tip">
+              <span aria-hidden="true">✦</span>
+              <p>ゴール時の<br /><strong>手持ち資産</strong>で順位が決まります。</p>
+            </div>
+          </aside>
+
+          <section class="board-panel">
+            <div class="turn-banner" id="turn-banner" aria-live="polite"></div>
+            <div class="board-frame">
+              <div id="board" class="board-grid" aria-label="人生ルーレットのすごろく盤"></div>
+            </div>
+            <div class="board-caption">
+              <span><i class="legend-dot money"></i>お金</span>
+              <span><i class="legend-dot event"></i>イベント</span>
+              <span><i class="legend-dot choice"></i>分岐</span>
+              <span><i class="legend-dot goal"></i>ゴール</span>
+            </div>
+          </section>
+
+          <aside class="panel action-panel" aria-labelledby="action-heading">
+            <div class="panel-heading">
+              <p class="eyebrow">YOUR TURN</p>
+              <h2 id="action-heading">運命のサイコロ</h2>
+            </div>
+            <div id="current-player-card" class="current-player-card"></div>
+            <div id="dice" class="dice" aria-label="サイコロの目"></div>
+            <button id="roll-button" class="roll-button" type="button">
+              <span class="button-icon" aria-hidden="true">✦</span>
+              サイコロを振る
+            </button>
+            <p id="roll-hint" class="roll-hint">あなたの番になったら、サイコロを振ろう。</p>
+            <div class="event-feed-wrap">
+              <div class="feed-title"><span>今日の出来事</span><span aria-hidden="true">⌁</span></div>
+              <ol id="event-feed" class="event-feed" aria-live="polite"></ol>
+            </div>
+          </aside>
+        </section>
+      </main>
+
+      <footer>
+        <span>人生ルーレット</span>
+        <span>オリジナルのローカル対戦ボードゲーム</span>
+      </footer>
+    </div>
+
+    <div class="modal-backdrop" id="setup-modal" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+      <section class="modal setup-modal-card">
+        <button class="modal-close" id="setup-close" type="button" aria-label="設定画面を閉じる">×</button>
+        <div class="modal-kicker">LIFE STARTER KIT</div>
+        <h2 id="setup-title">だれと人生を遊ぶ？</h2>
+        <p class="modal-lead">同じ画面を囲んで、2〜4人で遊べます。</p>
+        <div class="count-picker" aria-label="プレイ人数を選ぶ">
+          <button type="button" data-player-count="2">2人</button>
+          <button type="button" data-player-count="3">3人</button>
+          <button type="button" data-player-count="4">4人</button>
+        </div>
+        <form id="setup-form">
+          <div id="name-fields" class="name-fields"></div>
+          <button class="start-button" type="submit">この人生をはじめる <span aria-hidden="true">→</span></button>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop is-hidden" id="choice-modal" role="dialog" aria-modal="true" aria-labelledby="choice-title">
+      <section class="modal choice-modal-card">
+        <p class="modal-kicker">CHOICE TIME</p>
+        <h2 id="choice-title">人生の分かれ道</h2>
+        <p id="choice-description" class="modal-lead"></p>
+        <div id="choice-options" class="choice-options"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop is-hidden" id="result-modal" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <section class="modal result-modal-card">
+        <p class="modal-kicker">THE END, OR A NEW BEGINNING</p>
+        <h2 id="result-title">人生の結果発表</h2>
+        <p class="modal-lead">全員がゴールしました。最後に笑うのは…？</p>
+        <ol id="results-list" class="results-list"></ol>
+        <button id="play-again-button" class="start-button" type="button">もう一度あそぶ <span aria-hidden="true">↻</span></button>
+      </section>
+    </div>
+
+    <div class="modal-backdrop is-hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <section class="modal help-modal-card">
+        <button class="modal-close" id="help-close" type="button" aria-label="遊び方を閉じる">×</button>
+        <p class="modal-kicker">HOW TO PLAY</p>
+        <h2 id="help-title">遊び方はかんたん</h2>
+        <ol class="how-to-list">
+          <li><span>1</span><p><strong>人数と名前を決める</strong><br />2〜4人で順番に遊びます。</p></li>
+          <li><span>2</span><p><strong>サイコロを振って進む</strong><br />止まったマスの出来事があなたの人生に。</p></li>
+          <li><span>3</span><p><strong>分岐は自分で選ぶ</strong><br />選択によってお金や収入が変化します。</p></li>
+          <li><span>4</span><p><strong>全員ゴールで資産を比較</strong><br />いちばんお金を残した人の勝ちです。</p></li>
+        </ol>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
