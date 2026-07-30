@@ -46,7 +46,7 @@ const SPACES = [
   { id: "college-3", label: "研究発表", sub: "チャンス", icon: "🔭", type: "chance", grid: [5, 3], next: "college-4" },
   { id: "college-4", label: "卒業旅行", sub: "思い出", icon: "🧳", type: "event", amount: -10000, grid: [4, 4], next: "college-5" },
   { id: "college-5", label: "内定！", sub: "スタート", icon: "✦", type: "event", amount: 26000, grid: [4, 5], next: "city-join" },
-  { id: "work-1", label: "入社", sub: "新しい職場", icon: "🏢", type: "event", amount: 15000, eventScene: "building", grid: [8, 3], next: "work-2" },
+  { id: "work-1", label: "入社", sub: "新しい職場", icon: "🏢", type: "event", amount: 15000, eventScene: "office", grid: [8, 3], next: "work-2" },
   { id: "work-2", label: "初ボーナス", sub: "ラッキー", icon: "🎁", type: "event", amount: 18000, grid: [8, 4], next: "work-3" },
   { id: "work-3", label: "先輩の助言", sub: "いいこと", icon: "💬", type: "event", amount: 8000, grid: [7, 5], next: "work-4" },
   { id: "work-4", label: "スキルアップ", sub: "自己投資", icon: "💡", type: "event", amount: -7000, grid: [6, 5], next: "work-5" },
@@ -66,13 +66,13 @@ const SPACES = [
   { id: "urban-1", label: "シェアライフ", sub: "仲間", icon: "🪴", type: "event", amount: 12000, grid: [3, 12], next: "urban-2" },
   { id: "urban-2", label: "まちの祭り", sub: "たのしい", icon: "🎪", type: "event", amount: 9000, grid: [3, 13], next: "urban-3" },
   { id: "urban-3", label: "屋上カフェ", sub: "出会い", icon: "☕", type: "chance", grid: [4, 14], next: "urban-4" },
-  { id: "urban-4", label: "憧れのマイカー", sub: "大きな買い物", icon: "🏎", type: "event", amount: -30000, eventScene: "purchase", grid: [5, 14], next: "urban-5" },
+  { id: "urban-4", label: "憧れのマイカー", sub: "大きな買い物", icon: "🏎", type: "event", amount: -30000, eventScene: "car", grid: [5, 14], next: "urban-5" },
   { id: "urban-5", label: "引っ越し祝い", sub: "いいこと", icon: "🎀", type: "event", amount: 17000, grid: [6, 13], next: "urban-6" },
   { id: "urban-6", label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -9000, grid: [7, 12], next: "life-join" },
-  { id: "home-1", label: "リノベ計画", sub: "大きな住まい", icon: "🔨", type: "event", amount: -16000, eventScene: "building", grid: [5, 10], next: "home-2" },
+  { id: "home-1", label: "マイホーム購入", sub: "夢の住まい", icon: "🏠", type: "event", amount: -16000, eventScene: "home", grid: [5, 10], next: "home-2" },
   { id: "home-2", label: "家庭菜園", sub: "いいこと", icon: "🥕", type: "event", amount: 12000, grid: [6, 10], next: "home-3" },
   { id: "home-3", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [7, 10], next: "life-join" },
-  { id: "life-join", label: "特別な出会い", sub: "人生イベント", icon: "💍", type: "family", familyAction: "partner", amount: 18000, grid: [8, 11], next: "family-1" },
+  { id: "life-join", label: "結婚！", sub: "人生イベント", icon: "💍", type: "family", familyAction: "partner", amount: 18000, grid: [8, 11], next: "family-1" },
   { id: "family-1", label: "第一子誕生", sub: "家族が増える", icon: "🍼", type: "family", familyAction: "child", amount: 10000, grid: [9, 11], next: "family-2" },
   { id: "family-2", label: "第二子誕生", sub: "家族が増える", icon: "🧸", type: "family", familyAction: "child", amount: 8000, grid: [9, 10], next: "family-3" },
   { id: "family-3", label: "家族の休日", sub: "しあわせ", icon: "🎠", type: "event", amount: 15000, grid: [10, 9], next: "dream-fork" },
@@ -86,7 +86,7 @@ const SPACES = [
   { id: "challenge-1", label: "大きな挑戦", sub: "勝負", icon: "⚡", type: "chance", grid: [9, 7], next: "challenge-2" },
   { id: "challenge-2", label: "新プロジェクト", sub: "チャンス", icon: "🛠", type: "event", amount: 25000, grid: [9, 6], next: "challenge-3" },
   { id: "challenge-3", label: "ごほうび旅行", sub: "思い出", icon: "🌴", type: "event", amount: -12000, grid: [10, 5], next: "challenge-4" },
-  { id: "challenge-4", label: "大成功！", sub: "大金を獲得", icon: "🏅", type: "event", amount: 40000, eventScene: "windfall", grid: [11, 4], next: "last-join" },
+  { id: "challenge-4", label: "大成功！", sub: "大金を獲得", icon: "🏅", type: "event", amount: 40000, eventScene: "success", grid: [11, 4], next: "last-join" },
   { id: "relax-1", label: "家族の時間", sub: "しあわせ", icon: "🌼", type: "event", amount: 21000, grid: [11, 7], next: "relax-2" },
   { id: "relax-2", label: "好きな景色", sub: "思い出", icon: "🌅", type: "event", amount: 14000, grid: [11, 6], next: "relax-3" },
   { id: "relax-3", label: "小さな贅沢", sub: "いいこと", icon: "🍰", type: "event", amount: 9000, grid: [12, 5], next: "relax-4" },
@@ -118,18 +118,26 @@ const BRANCH_SIGNPOSTS = [
 ];
 
 const CHANCE_CARDS = [
-  { title: "懸賞に当選！", amount: 40000, eventScene: "windfall" },
-  { title: "友人の助け", amount: 18000 },
-  { title: "予定外の修理", amount: -26000, eventScene: "loss" },
-  { title: "とっておきの副収入", amount: 30000, eventScene: "windfall" },
-  { title: "うっかり出費", amount: -14000 },
+  { title: "宝くじに当選！", amount: 40000, eventScene: "lottery" },
+  { title: "友人の助け", amount: 18000, eventScene: "friends" },
+  { title: "予定外の修理", amount: -26000, eventScene: "repair" },
+  { title: "とっておきの副収入", amount: 30000, eventScene: "freelance" },
+  { title: "うっかり出費", amount: -14000, eventScene: "expense" },
 ];
 
 const EVENT_SCENES = {
-  building: { kicker: "BUILDING EVENT", label: "建物や住まいを手に入れるイベント" },
-  purchase: { kicker: "BIG PURCHASE", label: "大きな買い物をするイベント" },
-  windfall: { kicker: "BIG WIN", label: "大金を手に入れるイベント" },
-  loss: { kicker: "BIG LOSS", label: "大きなお金を失うイベント" },
+  office: { kicker: "NEW JOB", label: "新しい職場へ向かうイラスト" },
+  car: { kicker: "BIG PURCHASE", label: "オープンカーを買うイラスト" },
+  home: { kicker: "NEW HOME", label: "マイホームを買うイラスト" },
+  lottery: { kicker: "JACKPOT", label: "宝くじ当選と札束のイラスト" },
+  friends: { kicker: "GOOD FRIENDS", label: "友人に支えられるイラスト" },
+  repair: { kicker: "UNEXPECTED REPAIR", label: "修理費の請求に困るイラスト" },
+  freelance: { kicker: "SIDE INCOME", label: "副収入を得るイラスト" },
+  expense: { kicker: "BIG EXPENSE", label: "大きな出費に驚くイラスト" },
+  success: { kicker: "BIG SUCCESS", label: "プロジェクト成功を祝うイラスト" },
+  wedding: { kicker: "WEDDING DAY", label: "結婚式を挙げるイラスト" },
+  baby: { kicker: "WELCOME BABY", label: "赤ちゃんを抱っこする家族のイラスト" },
+  goal: { kicker: "LIFE GOAL", label: "ゴールのトロフィーを掲げるイラスト" },
 };
 
 const elements = {
@@ -451,17 +459,23 @@ function moveStep(remaining) {
   player.spaceId = nextId;
   player.steps += 1;
   const enteredSpace = currentSpace(player);
-  if (enteredSpace.type === "family") resolveFamilyEvent(player, enteredSpace);
+  const familyEvent = enteredSpace.type === "family" ? resolveFamilyEvent(player, enteredSpace) : null;
   render();
+  if (familyEvent) {
+    openLifeEvent(player, { ...familyEvent, resumeSteps: remaining - 1 });
+    return;
+  }
   window.setTimeout(() => moveStep(remaining - 1), 190);
 }
 
 function resolveFamilyEvent(player, space) {
-  if (player.familyMilestones.includes(space.id)) return false;
+  if (player.familyMilestones.includes(space.id)) return null;
   player.familyMilestones.push(space.id);
   let message = "";
+  let scene = "baby";
   if (space.familyAction === "partner" && !player.partner) {
     player.partner = true;
+    scene = "wedding";
     changeMoney(player, space.amount);
     message = `${player.name}は結婚！ オープンカーが2人乗りになった。 ${money(space.amount)}！`;
   } else if (space.familyAction === "child") {
@@ -474,23 +488,31 @@ function resolveFamilyEvent(player, space) {
   }
   addFeed(message, "choice-dot");
   toast(message);
-  return true;
+  return { scene, title: space.label, amount: space.amount };
 }
 
 function eventDescription(scene, player, title) {
   const descriptions = {
-    building: `${player.name}の人生に新しい拠点ができました。「${title}」を記念して一枚！`,
-    purchase: `${player.name}は思いきって大きな買い物。「${title}」が暮らしを変えます。`,
-    windfall: `${player.name}に大きな幸運が到来！ 「${title}」で資産がぐっと増えました。`,
-    loss: `${player.name}に予想外の出費。「${title}」を乗り越えて、次の一歩へ。`,
+    office: `${player.name}は新しい職場へ。今日から仕事の物語が始まります。`,
+    car: `${player.name}は憧れのオープンカーを購入！ 新しい景色へ出発です。`,
+    home: `${player.name}は夢のマイホームを手に入れました。新しい暮らしのスタート！`,
+    lottery: `${player.name}に大きな幸運が到来！ 「${title}」で資産がぐっと増えました。`,
+    friends: `${player.name}は友人たちに支えられ、前向きな一歩を踏み出せました。`,
+    repair: `${player.name}に予想外の出費。「${title}」を乗り越えて、次の一歩へ。`,
+    freelance: `${player.name}の頑張りが実り、とっておきの副収入を得ました。`,
+    expense: `${player.name}は大きな出費にびっくり。でも、人生はまだまだ続きます。`,
+    success: `${player.name}の挑戦が実を結びました！ チームと一緒に大成功を祝おう。`,
+    wedding: `${player.name}は大切な人と結婚。オープンカーにも新しい家族が加わります。`,
+    baby: `${player.name}の家族に赤ちゃんが誕生！ オープンカーがもっとにぎやかに。`,
+    goal: `${player.name}は人生のゴールへ到着！ 最後まで走り抜けたことを祝おう。`,
   };
   return descriptions[scene];
 }
 
-function openLifeEvent(player, { scene, title, amount }) {
+function openLifeEvent(player, { scene, title, amount, resumeSteps = null }) {
   const sceneConfig = EVENT_SCENES[scene];
   if (!sceneConfig) return false;
-  state.pendingEvent = { playerId: player.id, scene };
+  state.pendingEvent = { playerId: player.id, scene, resumeSteps };
   elements.eventScene.className = `event-scene event-scene--${scene}`;
   elements.eventScene.setAttribute("aria-label", sceneConfig.label);
   elements.eventKicker.textContent = sceneConfig.kicker;
@@ -503,9 +525,14 @@ function openLifeEvent(player, { scene, title, amount }) {
 }
 
 function continueAfterLifeEvent() {
-  if (!state.pendingEvent) return;
+  const pendingEvent = state.pendingEvent;
+  if (!pendingEvent) return;
   state.pendingEvent = null;
   elements.eventModal.classList.add("is-hidden");
+  if (Number.isInteger(pendingEvent.resumeSteps)) {
+    window.setTimeout(() => moveStep(pendingEvent.resumeSteps), 190);
+    return;
+  }
   finishTurn();
 }
 
@@ -518,7 +545,7 @@ function resolveLanding(player) {
     changeMoney(player, finishBonus);
     addFeed(`${player.name}が${player.finishOrder}番目にゴール！ ボーナス ${money(finishBonus)}。`, "choice-dot");
     toast(`${player.name}、ゴール！ おつかれさま！`);
-    openLifeEvent(player, { scene: "windfall", title: `${player.finishOrder}番目にゴール！`, amount: finishBonus });
+    openLifeEvent(player, { scene: "goal", title: `${player.finishOrder}番目にゴール！`, amount: finishBonus });
     return;
   }
   if (space.routeOptions) {
@@ -536,7 +563,8 @@ function resolveLanding(player) {
     if (chance.eventScene && openLifeEvent(player, { scene: chance.eventScene, title: chance.title, amount: chance.amount })) return;
     toast(`${chance.title} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`);
   } else if (space.type === "family") {
-    resolveFamilyEvent(player, space);
+    const familyEvent = resolveFamilyEvent(player, space);
+    if (familyEvent && openLifeEvent(player, familyEvent)) return;
   } else {
     const amount = space.amount || 0;
     changeMoney(player, amount);

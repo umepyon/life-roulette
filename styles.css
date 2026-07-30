@@ -102,13 +102,21 @@ footer { display: flex; justify-content: space-between; padding: 24px 4px 30px; 
 .character-taken { position: absolute; right: 5px; bottom: 5px; padding: 3px 5px; border-radius: 5px; color: white; background: rgba(23, 33, 63, .88); font-size: 7px; font-weight: 900; }
 .character-select-modal .start-button { max-width: 420px; margin: 17px auto 0; }
 
-.event-modal-card { width: min(100%, 560px); overflow: hidden; padding: 0 30px 28px; text-align: center; }
+.event-modal-card { width: min(100%, 390px); overflow: hidden; padding: 0 30px 24px; text-align: center; }
 .event-modal-card::before { z-index: 2; width: 100%; height: 7px; border-radius: 0; }
-.event-scene { width: calc(100% + 60px); aspect-ratio: 3 / 2; margin: 0 -30px 22px; background-image: url("assets/event-scenes.png"); background-repeat: no-repeat; background-size: 200% 200%; box-shadow: inset 0 -18px 30px rgba(16, 17, 45, .1); }
-.event-scene--building { background-position: 0 0; }
-.event-scene--purchase { background-position: 100% 0; }
-.event-scene--windfall { background-position: 0 100%; }
-.event-scene--loss { background-position: 100% 100%; }
+.event-scene { width: calc(100% + 60px); aspect-ratio: 1; margin: 0 -30px 20px; background-image: url("assets/event-scenes-detailed.png"); background-repeat: no-repeat; background-size: 400% 300%; box-shadow: inset 0 -18px 30px rgba(16, 17, 45, .1); }
+.event-scene--office { background-position: 0 0; }
+.event-scene--car { background-position: 33.333% 0; }
+.event-scene--home { background-position: 66.667% 0; }
+.event-scene--lottery { background-position: 100% 0; }
+.event-scene--friends { background-position: 0 50%; }
+.event-scene--repair { background-position: 33.333% 50%; }
+.event-scene--freelance { background-position: 66.667% 50%; }
+.event-scene--expense { background-position: 100% 50%; }
+.event-scene--success { background-position: 0 100%; }
+.event-scene--wedding { background-position: 33.333% 100%; }
+.event-scene--baby { background-position: 66.667% 100%; }
+.event-scene--goal { background-position: 100% 100%; }
 .event-modal-card .modal-lead { margin-bottom: 14px; }
 .event-amount { margin: 0 0 19px; font-family: Georgia, serif; font-size: clamp(28px, 5vw, 44px); font-weight: 900; }
 .event-amount.is-positive { color: #2c987d; }
