@@ -152,6 +152,7 @@ const elements = {
   rollButton: document.querySelector("#roll-button"),
   rollHint: document.querySelector("#roll-hint"),
   turnBanner: document.querySelector("#turn-banner"),
+  mobileDriveView: document.querySelector("#mobile-drive-view"),
   eventFeed: document.querySelector("#event-feed"),
   setupModal: document.querySelector("#setup-modal"),
   choiceModal: document.querySelector("#choice-modal"),
@@ -340,6 +341,31 @@ function renderCurrentPlayer() {
   elements.rollHint.textContent = state.isBusy ? "オープンカーがマス目を進んでいます…" : next ? `次は「${next.label}」の方向へ。` : "分岐で行き先を選んでください。";
 }
 
+function renderMobileDrive() {
+  const player = currentPlayer();
+  if (!player) {
+    elements.mobileDriveView.innerHTML = "";
+    elements.mobileDriveView.classList.remove("is-moving");
+    return;
+  }
+  const space = currentSpace(player);
+  const profile = characterProfile(player.characterId);
+  const progress = Math.min(100, Math.round((player.steps / 34) * 100));
+  const drivingMessage = state.isBusy ? `サイコロの目 ${state.dice}。${state.dice}マス走行中！` : `いまは「${space.label}」を走行中`;
+  elements.mobileDriveView.classList.toggle("is-moving", state.isBusy);
+  elements.mobileDriveView.innerHTML = `
+    <div class="mobile-drive-scene ${profile.gender === "女性" ? "mobile-drive-scene--women" : ""}" role="img" aria-label="${escapeHtml(player.name)}がオープンカーで道路を走るドライブビュー">
+      <div class="mobile-drive-speed-lines" aria-hidden="true"></div>
+      <div class="mobile-drive-hud">
+        <span class="mobile-drive-kicker">DRIVE VIEW</span>
+        <strong><i style="background:${player.color}"></i>${escapeHtml(player.name)}のドライブ</strong>
+        <span>${escapeHtml(drivingMessage)}</span>
+      </div>
+      <div class="mobile-drive-progress" aria-label="ゴールまでの進行度 ${progress}%"><span style="width:${progress}%"></span></div>
+      <div class="mobile-drive-location"><span>${space.icon}</span><strong>${escapeHtml(space.label)}</strong><small>${escapeHtml(space.sub)}</small></div>
+    </div>`;
+}
+
 function renderFeed() {
   elements.eventFeed.innerHTML = state.feed.length ? state.feed.map((item) => `<li><span class="feed-dot ${item.tone || ""}"></span><span>${item.text}</span></li>`).join("") : `<li><span class="feed-dot"></span><span>さあ、最初のサイコロを振ろう。</span></li>`;
 }
@@ -348,6 +374,7 @@ function render() {
   renderBoard();
   renderPlayers();
   renderCurrentPlayer();
+  renderMobileDrive();
   elements.dice.innerHTML = diceMarkup(state.dice);
   elements.dice.classList.toggle("rolling", state.isBusy);
   renderFeed();
