@@ -30,6 +30,7 @@ const DEFAULT_NAMES = DEFAULT_CHARACTER_IDS.map((id) => CHARACTER_BY_ID[id].name
 const STARTING_CASH = 120000;
 const GOAL_ID = "goal";
 const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
+const GOAL_BONUS_AMOUNTS = { 1: 1000000, 2: 2000000, 3: 3000000, 4: 5000000, 5: 7000000, 6: 10000000 };
 
 const SPACES = [
   { id: "start", label: "START", sub: "出発", icon: "🏁", type: "start", grid: [11, 1], next: "first-payday" },
@@ -139,6 +140,8 @@ const EVENT_SCENES = {
   wedding: { kicker: "WEDDING DAY", label: "結婚式を挙げるイラスト" },
   baby: { kicker: "WELCOME BABY", label: "赤ちゃんを抱っこする家族のイラスト" },
   goal: { kicker: "LIFE GOAL", label: "ゴールのトロフィーを掲げるイラスト" },
+  "goal-poor-man": { kicker: "TOUGH ENDING", label: "古いアパートで節約暮らしをする男性のイラスト" },
+  "goal-poor-woman": { kicker: "TOUGH ENDING", label: "古いアパートで節約暮らしをする女性のイラスト" },
 };
 
 const elements = {
@@ -154,6 +157,7 @@ const elements = {
   choiceModal: document.querySelector("#choice-modal"),
   eventModal: document.querySelector("#event-modal"),
   giftModal: document.querySelector("#gift-modal"),
+  goalBonusModal: document.querySelector("#goal-bonus-modal"),
   resultModal: document.querySelector("#result-modal"),
   helpModal: document.querySelector("#help-modal"),
   setupPlayerTabs: document.querySelector("#setup-player-tabs"),
@@ -174,6 +178,11 @@ const elements = {
   giftDice: document.querySelector("#gift-dice"),
   giftResult: document.querySelector("#gift-result"),
   giftRoll: document.querySelector("#gift-roll"),
+  goalBonusTitle: document.querySelector("#goal-bonus-title"),
+  goalBonusDescription: document.querySelector("#goal-bonus-description"),
+  goalBonusDice: document.querySelector("#goal-bonus-dice"),
+  goalBonusResult: document.querySelector("#goal-bonus-result"),
+  goalBonusRoll: document.querySelector("#goal-bonus-roll"),
   resultsList: document.querySelector("#results-list"),
   toast: document.querySelector("#toast"),
 };
@@ -186,6 +195,7 @@ const state = {
   pendingChoice: null,
   pendingEvent: null,
   pendingGift: null,
+  pendingGoalBonus: null,
   feed: [],
   playerCount: 2,
   setupNames: [...DEFAULT_NAMES],
@@ -444,6 +454,7 @@ function startGame(event) {
   state.pendingChoice = null;
   state.pendingEvent = null;
   state.pendingGift = null;
+  state.pendingGoalBonus = null;
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
   elements.setupModal.classList.add("is-hidden");
@@ -453,7 +464,7 @@ function startGame(event) {
 }
 
 function changeMoney(player, amount) {
-  player.cash = Math.max(0, player.cash + amount);
+  player.cash += amount;
 }
 
 function rollDice() {
@@ -529,6 +540,8 @@ function eventDescription(scene, player, title) {
     wedding: `${player.name}は大切な人と結婚。オープンカーにも新しい家族が加わります。`,
     baby: `${player.name}の家族に赤ちゃんが誕生！ オープンカーがもっとにぎやかに。`,
     goal: `${player.name}は人生のゴールへ到着！ 最後まで走り抜けたことを祝おう。`,
+    "goal-poor-man": `${player.name}は所持金マイナスでゴール。ここから立て直す、新しい人生の始まりです。`,
+    "goal-poor-woman": `${player.name}は所持金マイナスでゴール。ここから立て直す、新しい人生の始まりです。`,
   };
   return descriptions[scene];
 }
@@ -609,7 +622,7 @@ function renderGiftCollection() {
   elements.giftDice.innerHTML = diceMarkup(result?.roll || 1);
   elements.giftDice.classList.toggle("rolling", gift.phase === "rolling");
   elements.giftResult.textContent = isResult
-    ? `出目 ${result.roll}：${money(result.paid)} を渡しました${result.paid < result.requested ? "（所持金が足りないため残高まで）" : ""}`
+    ? `出目 ${result.roll}：${money(result.paid)} を渡しました`
     : `ご祝儀の金額はサイコロで決まります。${nextPayer ? `次は${nextPayer.name}さんも振ります。` : ""}`;
   elements.giftRoll.disabled = gift.phase === "rolling";
   elements.giftRoll.setAttribute("aria-label", isResult ? "次のご祝儀へ進む" : `${payer.name}さんがご祝儀のサイコロを振る`);
@@ -636,7 +649,7 @@ function settleGiftDice() {
   const payer = currentGiftPayer();
   if (!gift || !recipient || !payer || gift.phase !== "rolling") return;
   const requested = giftAmountFor(gift.lastResult.roll);
-  const paid = Math.min(payer.cash, requested);
+  const paid = requested;
   changeMoney(payer, -paid);
   changeMoney(recipient, paid);
   gift.total += paid;
@@ -675,16 +688,102 @@ function continueGiftCollection() {
   finishTurn();
 }
 
+function goalBonusFor(roll) {
+  return GOAL_BONUS_AMOUNTS[roll] || GOAL_BONUS_AMOUNTS[1];
+}
+
+function goalSceneFor(player) {
+  if (player.cash >= 0) return "goal";
+  return characterProfile(player.characterId).gender === "女性" ? "goal-poor-woman" : "goal-poor-man";
+}
+
+function openGoalEvent(player, amount) {
+  return openLifeEvent(player, {
+    scene: goalSceneFor(player),
+    title: `${player.finishOrder}番目にゴール！`,
+    amount,
+  });
+}
+
+function startGoalBonus(player) {
+  state.pendingGoalBonus = { playerId: player.id, phase: "prompt", roll: null, amount: null };
+  renderGoalBonus();
+  elements.goalBonusModal.classList.remove("is-hidden");
+}
+
+function renderGoalBonus() {
+  const bonus = state.pendingGoalBonus;
+  const player = bonus && state.players.find((entry) => entry.id === bonus.playerId);
+  if (!bonus || !player) return;
+  const isResult = bonus.phase === "result";
+  elements.goalBonusTitle.textContent = `${player.name}さん、1番乗りゴール！`;
+  elements.goalBonusDescription.textContent = isResult
+    ? `${player.name}さんは、1番乗りボーナスを獲得しました！`
+    : "サイコロを振って、100万円〜1,000万円のボーナスを決めましょう。";
+  elements.goalBonusDice.innerHTML = diceMarkup(bonus.roll || 1);
+  elements.goalBonusDice.classList.toggle("rolling", bonus.phase === "rolling");
+  elements.goalBonusResult.textContent = isResult
+    ? `出目 ${bonus.roll}：${money(bonus.amount)} を獲得！`
+    : "大きなボーナスのチャンス！";
+  elements.goalBonusRoll.disabled = bonus.phase === "rolling";
+  elements.goalBonusRoll.setAttribute("aria-label", isResult ? "ゴールの結果を見る" : `${player.name}さんが1番乗りボーナスのサイコロを振る`);
+  elements.goalBonusRoll.innerHTML = bonus.phase === "rolling"
+    ? `<span class="button-icon" aria-hidden="true">⌁</span>ボーナスを決めています`
+    : isResult
+      ? `ゴールの結果を見る <span aria-hidden="true">→</span>`
+      : `ボーナスサイコロを振る <span aria-hidden="true">🎲</span>`;
+}
+
+function rollGoalBonus() {
+  const bonus = state.pendingGoalBonus;
+  if (!bonus || bonus.phase !== "prompt") return;
+  bonus.phase = "rolling";
+  bonus.roll = Math.floor(Math.random() * 6) + 1;
+  renderGoalBonus();
+  window.setTimeout(settleGoalBonus, 520);
+}
+
+function settleGoalBonus() {
+  const bonus = state.pendingGoalBonus;
+  const player = bonus && state.players.find((entry) => entry.id === bonus.playerId);
+  if (!bonus || !player || bonus.phase !== "rolling") return;
+  bonus.amount = goalBonusFor(bonus.roll);
+  changeMoney(player, bonus.amount);
+  bonus.phase = "result";
+  addFeed(`${player.name}は1番乗りボーナス ${money(bonus.amount)} を獲得した！（出目 ${bonus.roll}）`, "choice-dot");
+  render();
+  renderGoalBonus();
+}
+
+function continueGoalBonus() {
+  const bonus = state.pendingGoalBonus;
+  if (!bonus) return;
+  if (bonus.phase === "prompt") {
+    rollGoalBonus();
+    return;
+  }
+  if (bonus.phase !== "result") return;
+  const player = state.players.find((entry) => entry.id === bonus.playerId);
+  const amount = bonus.amount;
+  state.pendingGoalBonus = null;
+  elements.goalBonusModal.classList.add("is-hidden");
+  if (player) openGoalEvent(player, amount);
+}
+
 function resolveLanding(player) {
   const space = currentSpace(player);
   if (space.id === GOAL_ID) {
     player.finished = true;
     player.finishOrder = state.players.filter((entry) => entry.finished).length;
-    const finishBonus = 45000;
-    changeMoney(player, finishBonus);
-    addFeed(`${player.name}が${player.finishOrder}番目にゴール！ ボーナス ${money(finishBonus)}。`, "choice-dot");
+    const finishBonus = player.finishOrder === 1 ? 0 : 45000;
+    if (finishBonus) changeMoney(player, finishBonus);
+    addFeed(`${player.name}が${player.finishOrder}番目にゴール！${finishBonus ? ` ボーナス ${money(finishBonus)}。` : " 1番乗りボーナスに挑戦！"}`, "choice-dot");
     toast(`${player.name}、ゴール！ おつかれさま！`);
-    openLifeEvent(player, { scene: "goal", title: `${player.finishOrder}番目にゴール！`, amount: finishBonus });
+    if (player.finishOrder === 1) {
+      startGoalBonus(player);
+      return;
+    }
+    openGoalEvent(player, finishBonus);
     return;
   }
   if (space.routeOptions) {
@@ -767,6 +866,7 @@ function endGame() {
   state.pendingChoice = null;
   state.pendingEvent = null;
   state.pendingGift = null;
+  state.pendingGoalBonus = null;
   state.feed = [{ text: "ゲームを終了しました。おつかれさまでした。", tone: "choice-dot" }];
   elements.resultModal.classList.add("is-hidden");
   render();
@@ -802,6 +902,7 @@ elements.setupForm.addEventListener("submit", startGame);
 elements.rollButton.addEventListener("click", rollDice);
 elements.eventContinue.addEventListener("click", continueAfterLifeEvent);
 elements.giftRoll.addEventListener("click", continueGiftCollection);
+elements.goalBonusRoll.addEventListener("click", continueGoalBonus);
 document.querySelector("#new-game-button").addEventListener("click", openSetup);
 document.querySelector("#play-again-button").addEventListener("click", openSetup);
 document.querySelector("#quit-game-button").addEventListener("click", endGame);
