@@ -147,6 +147,7 @@ const EVENT_SCENES = {
 const elements = {
   board: document.querySelector("#board"),
   playerList: document.querySelector("#player-list"),
+  playerDetails: document.querySelector("#player-details"),
   currentPlayerCard: document.querySelector("#current-player-card"),
   dice: document.querySelector("#dice"),
   rollButton: document.querySelector("#roll-button"),
@@ -967,6 +968,7 @@ document.querySelector("#setup-close").addEventListener("click", () => { if (sta
 elements.choiceOptions.addEventListener("click", (event) => { const option = event.target.closest("[data-choice-option]"); if (option) chooseOption(Number(option.dataset.choiceOption)); });
 document.querySelectorAll(".modal-backdrop").forEach((backdrop) => backdrop.addEventListener("click", (event) => { if (event.target === backdrop && (backdrop === elements.helpModal || (backdrop === elements.setupModal && state.players.length))) backdrop.classList.add("is-hidden"); }));
 
+if (window.matchMedia("(max-width: 760px)").matches) elements.playerDetails.open = false;
 renderSetup();
 startGame(new Event("submit"));
 elements.setupModal.classList.remove("is-hidden");

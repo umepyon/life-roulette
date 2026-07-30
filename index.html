@@ -46,15 +46,21 @@
 
         <section class="game-layout" aria-label="人生ルーレットのゲーム画面">
           <aside class="panel player-panel" aria-labelledby="players-heading">
-            <div class="panel-heading">
-              <p class="eyebrow">PLAYERS</p>
-              <h2 id="players-heading">いまの人生</h2>
-            </div>
-            <div id="player-list" class="player-list"></div>
-            <div class="panel-tip">
-              <span aria-hidden="true">✦</span>
-              <p>ゴール時の<br /><strong>手持ち資産</strong>で順位が決まります。</p>
-            </div>
+            <details id="player-details" class="player-details" open>
+              <summary>
+                <div class="panel-heading">
+                  <p class="eyebrow">PLAYERS</p>
+                  <h2 id="players-heading">いまの人生</h2>
+                </div>
+              </summary>
+              <div class="player-details-content">
+                <div id="player-list" class="player-list"></div>
+                <div class="panel-tip">
+                  <span aria-hidden="true">✦</span>
+                  <p>ゴール時の<br /><strong>手持ち資産</strong>で順位が決まります。</p>
+                </div>
+              </div>
+            </details>
           </aside>
 
           <section class="board-panel">
