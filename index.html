@@ -145,13 +145,28 @@
       </section>
     </div>
 
+    <div class="modal-backdrop is-hidden" id="gift-modal" role="dialog" aria-modal="true" aria-labelledby="gift-title">
+      <section class="modal gift-modal-card">
+        <p class="modal-kicker">CELEBRATION GIFT</p>
+        <h2 id="gift-title">ご祝儀タイム</h2>
+        <p id="gift-description" class="modal-lead"></p>
+        <p id="gift-rule" class="gift-rule">1→1万円 / 2→2万円 / 3→3万円 / 4→5万円 / 5→7万円 / 6→10万円<br />※4万円は使いません</p>
+        <div id="gift-dice" class="gift-dice" aria-label="ご祝儀用サイコロの目" aria-live="polite"></div>
+        <p id="gift-result" class="gift-result" aria-live="polite"></p>
+        <button id="gift-roll" class="start-button" type="button">サイコロを振る <span aria-hidden="true">🎲</span></button>
+      </section>
+    </div>
+
     <div class="modal-backdrop is-hidden" id="result-modal" role="dialog" aria-modal="true" aria-labelledby="result-title">
       <section class="modal result-modal-card">
         <p class="modal-kicker">THE END, OR A NEW BEGINNING</p>
         <h2 id="result-title">人生の結果発表</h2>
         <p class="modal-lead">全員がゴールしました。最後に笑うのは…？</p>
         <ol id="results-list" class="results-list"></ol>
-        <button id="play-again-button" class="start-button" type="button">もう一度あそぶ <span aria-hidden="true">↻</span></button>
+        <div class="result-actions">
+          <button id="play-again-button" class="start-button" type="button">もう一度あそぶ <span aria-hidden="true">↻</span></button>
+          <button id="quit-game-button" class="secondary-button" type="button">終了する</button>
+        </div>
       </section>
     </div>
 

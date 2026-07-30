@@ -29,6 +29,7 @@ const DEFAULT_CHARACTER_IDS = ["m1", "f1", "m2", "f2"];
 const DEFAULT_NAMES = DEFAULT_CHARACTER_IDS.map((id) => CHARACTER_BY_ID[id].name);
 const STARTING_CASH = 120000;
 const GOAL_ID = "goal";
+const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
 
 const SPACES = [
   { id: "start", label: "START", sub: "出発", icon: "🏁", type: "start", grid: [11, 1], next: "first-payday" },
@@ -152,6 +153,7 @@ const elements = {
   setupModal: document.querySelector("#setup-modal"),
   choiceModal: document.querySelector("#choice-modal"),
   eventModal: document.querySelector("#event-modal"),
+  giftModal: document.querySelector("#gift-modal"),
   resultModal: document.querySelector("#result-modal"),
   helpModal: document.querySelector("#help-modal"),
   setupPlayerTabs: document.querySelector("#setup-player-tabs"),
@@ -167,6 +169,11 @@ const elements = {
   eventDescription: document.querySelector("#event-description"),
   eventAmount: document.querySelector("#event-amount"),
   eventContinue: document.querySelector("#event-continue"),
+  giftTitle: document.querySelector("#gift-title"),
+  giftDescription: document.querySelector("#gift-description"),
+  giftDice: document.querySelector("#gift-dice"),
+  giftResult: document.querySelector("#gift-result"),
+  giftRoll: document.querySelector("#gift-roll"),
   resultsList: document.querySelector("#results-list"),
   toast: document.querySelector("#toast"),
 };
@@ -178,6 +185,7 @@ const state = {
   isBusy: false,
   pendingChoice: null,
   pendingEvent: null,
+  pendingGift: null,
   feed: [],
   playerCount: 2,
   setupNames: [...DEFAULT_NAMES],
@@ -296,7 +304,15 @@ function renderPlayers() {
 
 function renderCurrentPlayer() {
   const player = currentPlayer();
-  if (!player) return;
+  if (!player) {
+    elements.currentPlayerCard.innerHTML = `<p class="inactive-game-copy">ゲームを終了しました。<br />また遊ぶときは「新しいゲーム」を押してください。</p>`;
+    elements.turnBanner.textContent = "ゲームを終了しました。おつかれさまでした！";
+    elements.rollButton.disabled = true;
+    elements.rollButton.setAttribute("aria-label", "ゲームは終了しています");
+    elements.rollButton.innerHTML = `<span class="button-icon" aria-hidden="true">✦</span>サイコロを振る`;
+    elements.rollHint.textContent = "新しいゲームから、いつでも再開できます。";
+    return;
+  }
   const space = currentSpace(player);
   const next = nextSpaceId(player) ? SPACE_BY_ID[nextSpaceId(player)] : null;
   elements.currentPlayerCard.innerHTML = `
@@ -427,6 +443,7 @@ function startGame(event) {
   state.isBusy = false;
   state.pendingChoice = null;
   state.pendingEvent = null;
+  state.pendingGift = null;
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
   elements.setupModal.classList.add("is-hidden");
@@ -462,7 +479,11 @@ function moveStep(remaining) {
   const familyEvent = enteredSpace.type === "family" ? resolveFamilyEvent(player, enteredSpace) : null;
   render();
   if (familyEvent) {
-    openLifeEvent(player, { ...familyEvent, resumeSteps: remaining - 1 });
+    openLifeEvent(player, {
+      ...familyEvent,
+      resumeSteps: remaining - 1,
+      followup: { type: "gift", celebration: familyEvent.celebration },
+    });
     return;
   }
   window.setTimeout(() => moveStep(remaining - 1), 190);
@@ -473,13 +494,16 @@ function resolveFamilyEvent(player, space) {
   player.familyMilestones.push(space.id);
   let message = "";
   let scene = "baby";
+  let celebration = "";
   if (space.familyAction === "partner" && !player.partner) {
     player.partner = true;
     scene = "wedding";
+    celebration = `${player.name}さんが結婚しました！`;
     changeMoney(player, space.amount);
     message = `${player.name}は結婚！ オープンカーが2人乗りになった。 ${money(space.amount)}！`;
   } else if (space.familyAction === "child") {
     player.children += 1;
+    celebration = `${player.name}さんに第${player.children}子が生まれました！`;
     changeMoney(player, space.amount);
     message = `${player.name}に子どもが生まれた！ ${familySummary(player)}に。 ${money(space.amount)}！`;
   } else {
@@ -488,7 +512,7 @@ function resolveFamilyEvent(player, space) {
   }
   addFeed(message, "choice-dot");
   toast(message);
-  return { scene, title: space.label, amount: space.amount };
+  return { scene, title: space.label, amount: space.amount, celebration };
 }
 
 function eventDescription(scene, player, title) {
@@ -509,10 +533,10 @@ function eventDescription(scene, player, title) {
   return descriptions[scene];
 }
 
-function openLifeEvent(player, { scene, title, amount, resumeSteps = null }) {
+function openLifeEvent(player, { scene, title, amount, resumeSteps = null, followup = null }) {
   const sceneConfig = EVENT_SCENES[scene];
   if (!sceneConfig) return false;
-  state.pendingEvent = { playerId: player.id, scene, resumeSteps };
+  state.pendingEvent = { playerId: player.id, scene, resumeSteps, followup };
   elements.eventScene.className = `event-scene event-scene--${scene}`;
   elements.eventScene.setAttribute("aria-label", sceneConfig.label);
   elements.eventKicker.textContent = sceneConfig.kicker;
@@ -529,8 +553,123 @@ function continueAfterLifeEvent() {
   if (!pendingEvent) return;
   state.pendingEvent = null;
   elements.eventModal.classList.add("is-hidden");
+  if (pendingEvent.followup?.type === "gift") {
+    startGiftCollection(pendingEvent.playerId, pendingEvent.followup, pendingEvent.resumeSteps);
+    return;
+  }
   if (Number.isInteger(pendingEvent.resumeSteps)) {
     window.setTimeout(() => moveStep(pendingEvent.resumeSteps), 190);
+    return;
+  }
+  finishTurn();
+}
+
+function giftAmountFor(roll) {
+  return GIFT_AMOUNTS[roll] || GIFT_AMOUNTS[1];
+}
+
+function startGiftCollection(recipientId, { celebration }, resumeSteps = null) {
+  const payerIds = state.players.filter((player) => player.id !== recipientId).map((player) => player.id);
+  if (!payerIds.length) {
+    if (Number.isInteger(resumeSteps)) window.setTimeout(() => moveStep(resumeSteps), 190);
+    else finishTurn();
+    return;
+  }
+  state.pendingGift = {
+    recipientId,
+    celebration,
+    payerIds,
+    payerIndex: 0,
+    phase: "prompt",
+    lastResult: null,
+    resumeSteps,
+    total: 0,
+  };
+  renderGiftCollection();
+  elements.giftModal.classList.remove("is-hidden");
+}
+
+function currentGiftPayer() {
+  const gift = state.pendingGift;
+  return gift ? state.players.find((player) => player.id === gift.payerIds[gift.payerIndex]) : null;
+}
+
+function renderGiftCollection() {
+  const gift = state.pendingGift;
+  const recipient = gift && state.players.find((player) => player.id === gift.recipientId);
+  const payer = currentGiftPayer();
+  if (!gift || !recipient || !payer) return;
+  const nextPayer = state.players.find((player) => player.id === gift.payerIds[gift.payerIndex + 1]);
+  const result = gift.lastResult;
+  const isResult = gift.phase === "result";
+  elements.giftTitle.textContent = gift.celebration;
+  elements.giftDescription.textContent = isResult
+    ? `${payer.name}さんから、${recipient.name}さんへご祝儀が渡されました。`
+    : `${payer.name}さん、${recipient.name}さんにご祝儀を渡すことになりました。サイコロを振ってください。`;
+  elements.giftDice.innerHTML = diceMarkup(result?.roll || 1);
+  elements.giftDice.classList.toggle("rolling", gift.phase === "rolling");
+  elements.giftResult.textContent = isResult
+    ? `出目 ${result.roll}：${money(result.paid)} を渡しました${result.paid < result.requested ? "（所持金が足りないため残高まで）" : ""}`
+    : `ご祝儀の金額はサイコロで決まります。${nextPayer ? `次は${nextPayer.name}さんも振ります。` : ""}`;
+  elements.giftRoll.disabled = gift.phase === "rolling";
+  elements.giftRoll.setAttribute("aria-label", isResult ? "次のご祝儀へ進む" : `${payer.name}さんがご祝儀のサイコロを振る`);
+  elements.giftRoll.innerHTML = gift.phase === "rolling"
+    ? `<span class="button-icon" aria-hidden="true">⌁</span>サイコロを振っています`
+    : isResult
+      ? `${nextPayer ? `次は${escapeHtml(nextPayer.name)}さんへ` : "お祝いを受け取る"} <span aria-hidden="true">→</span>`
+      : `サイコロを振る <span aria-hidden="true">🎲</span>`;
+}
+
+function rollGiftDice() {
+  const gift = state.pendingGift;
+  const payer = currentGiftPayer();
+  if (!gift || !payer || gift.phase !== "prompt") return;
+  gift.phase = "rolling";
+  gift.lastResult = { roll: Math.floor(Math.random() * 6) + 1 };
+  renderGiftCollection();
+  window.setTimeout(settleGiftDice, 520);
+}
+
+function settleGiftDice() {
+  const gift = state.pendingGift;
+  const recipient = gift && state.players.find((player) => player.id === gift.recipientId);
+  const payer = currentGiftPayer();
+  if (!gift || !recipient || !payer || gift.phase !== "rolling") return;
+  const requested = giftAmountFor(gift.lastResult.roll);
+  const paid = Math.min(payer.cash, requested);
+  changeMoney(payer, -paid);
+  changeMoney(recipient, paid);
+  gift.total += paid;
+  gift.lastResult = { ...gift.lastResult, requested, paid };
+  gift.phase = "result";
+  addFeed(`${payer.name}は${recipient.name}にご祝儀 ${money(paid)} を渡した（出目 ${gift.lastResult.roll}）。`, "negative");
+  render();
+  renderGiftCollection();
+}
+
+function continueGiftCollection() {
+  const gift = state.pendingGift;
+  if (!gift) return;
+  if (gift.phase === "prompt") {
+    rollGiftDice();
+    return;
+  }
+  if (gift.phase !== "result") return;
+  if (gift.payerIndex + 1 < gift.payerIds.length) {
+    gift.payerIndex += 1;
+    gift.phase = "prompt";
+    gift.lastResult = null;
+    renderGiftCollection();
+    return;
+  }
+  const recipient = state.players.find((player) => player.id === gift.recipientId);
+  state.pendingGift = null;
+  elements.giftModal.classList.add("is-hidden");
+  addFeed(`${recipient.name}はみんなからご祝儀合計 ${money(gift.total)} を受け取った！`, "choice-dot");
+  toast(`${recipient.name}さん、おめでとう！`);
+  render();
+  if (Number.isInteger(gift.resumeSteps)) {
+    window.setTimeout(() => moveStep(gift.resumeSteps), 190);
     return;
   }
   finishTurn();
@@ -564,7 +703,10 @@ function resolveLanding(player) {
     toast(`${chance.title} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`);
   } else if (space.type === "family") {
     const familyEvent = resolveFamilyEvent(player, space);
-    if (familyEvent && openLifeEvent(player, familyEvent)) return;
+    if (familyEvent && openLifeEvent(player, {
+      ...familyEvent,
+      followup: { type: "gift", celebration: familyEvent.celebration },
+    })) return;
   } else {
     const amount = space.amount || 0;
     changeMoney(player, amount);
@@ -617,6 +759,20 @@ function showResults() {
   elements.resultModal.classList.remove("is-hidden");
 }
 
+function endGame() {
+  state.players = [];
+  state.currentIndex = 0;
+  state.dice = 1;
+  state.isBusy = false;
+  state.pendingChoice = null;
+  state.pendingEvent = null;
+  state.pendingGift = null;
+  state.feed = [{ text: "ゲームを終了しました。おつかれさまでした。", tone: "choice-dot" }];
+  elements.resultModal.classList.add("is-hidden");
+  render();
+  toast("ゲームを終了しました。おつかれさまでした！");
+}
+
 document.querySelectorAll("[data-player-count]").forEach((button) => button.addEventListener("click", () => {
   state.playerCount = Number(button.dataset.playerCount);
   renderSetup();
@@ -645,8 +801,10 @@ elements.nameFields.addEventListener("input", (event) => {
 elements.setupForm.addEventListener("submit", startGame);
 elements.rollButton.addEventListener("click", rollDice);
 elements.eventContinue.addEventListener("click", continueAfterLifeEvent);
+elements.giftRoll.addEventListener("click", continueGiftCollection);
 document.querySelector("#new-game-button").addEventListener("click", openSetup);
 document.querySelector("#play-again-button").addEventListener("click", openSetup);
+document.querySelector("#quit-game-button").addEventListener("click", endGame);
 document.querySelector("#help-button").addEventListener("click", () => elements.helpModal.classList.remove("is-hidden"));
 document.querySelector("#help-close").addEventListener("click", () => elements.helpModal.classList.add("is-hidden"));
 document.querySelector("#setup-close").addEventListener("click", () => { if (state.players.length) elements.setupModal.classList.add("is-hidden"); });
