@@ -97,18 +97,29 @@
     </div>
 
     <div class="modal-backdrop" id="setup-modal" role="dialog" aria-modal="true" aria-labelledby="setup-title">
-      <section class="modal setup-modal-card">
+      <section class="modal setup-modal-card character-select-modal">
         <button class="modal-close" id="setup-close" type="button" aria-label="設定画面を閉じる">×</button>
         <div class="modal-kicker">LIFE STARTER KIT</div>
-        <h2 id="setup-title">だれと人生を遊ぶ？</h2>
-        <p class="modal-lead">同じ画面を囲んで、2〜4人で遊べます。</p>
+        <h2 id="setup-title">人生の主人公を選ぼう</h2>
+        <p class="modal-lead">同じ画面を囲んで、2〜4人で遊べます。プレイヤーごとにキャラクターを選んでください。</p>
         <div class="count-picker" aria-label="プレイ人数を選ぶ">
           <button type="button" data-player-count="2">2人</button>
           <button type="button" data-player-count="3">3人</button>
           <button type="button" data-player-count="4">4人</button>
         </div>
+        <div id="setup-player-tabs" class="setup-player-tabs" aria-label="設定するプレイヤー"></div>
         <form id="setup-form">
-          <div id="name-fields" class="name-fields"></div>
+          <div class="setup-profile-layout">
+            <section class="setup-player-editor" aria-labelledby="profile-editor-title">
+              <p class="setup-section-label" id="profile-editor-title">PLAYER PROFILE</p>
+              <div id="name-fields" class="setup-player-profile"></div>
+            </section>
+            <fieldset class="character-picker">
+              <legend>キャラクターを選ぶ</legend>
+              <p class="character-picker-help">カードを選ぶと、趣味と将来なりたい職業もプロフィールになります。</p>
+              <div id="character-grid" class="character-grid"></div>
+            </fieldset>
+          </div>
           <button class="start-button" type="submit">この人生をはじめる <span aria-hidden="true">→</span></button>
         </form>
       </section>
@@ -120,6 +131,17 @@
         <h2 id="choice-title">人生の分かれ道</h2>
         <p id="choice-description" class="modal-lead"></p>
         <div id="choice-options" class="choice-options"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop is-hidden" id="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-title">
+      <section class="modal event-modal-card">
+        <div id="event-scene" class="event-scene" role="img"></div>
+        <p id="event-kicker" class="modal-kicker">LIFE EVENT</p>
+        <h2 id="event-title">人生のビッグイベント</h2>
+        <p id="event-description" class="modal-lead"></p>
+        <div id="event-amount" class="event-amount" aria-live="polite"></div>
+        <button id="event-continue" class="start-button" type="button">つぎの人生へ <span aria-hidden="true">→</span></button>
       </section>
     </div>
 

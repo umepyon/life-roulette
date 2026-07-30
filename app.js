@@ -5,7 +5,28 @@ const PLAYER_COLORS = [
   { value: "#e2a83e", name: "きん" },
 ];
 
-const DEFAULT_NAMES = ["はる", "そら", "みどり", "もも"];
+const CHARACTER_PROFILES = [
+  { id: "m1", name: "湊", gender: "男性", hobby: "写真とキャンプ", dreamJob: "冒険写真家", sheet: "men", sprite: 0 },
+  { id: "m2", name: "律", gender: "男性", hobby: "科学実験", dreamJob: "研究者", sheet: "men", sprite: 1 },
+  { id: "m3", name: "蓮", gender: "男性", hobby: "バスケットボール", dreamJob: "スポーツトレーナー", sheet: "men", sprite: 2 },
+  { id: "m4", name: "颯太", gender: "男性", hobby: "コーヒー研究", dreamJob: "バリスタ", sheet: "men", sprite: 3 },
+  { id: "m5", name: "大和", gender: "男性", hobby: "街歩き", dreamJob: "起業家", sheet: "men", sprite: 4 },
+  { id: "m6", name: "悠真", gender: "男性", hobby: "登山", dreamJob: "アウトドアガイド", sheet: "men", sprite: 5 },
+  { id: "m7", name: "蒼", gender: "男性", hobby: "書道", dreamJob: "クリエイティブディレクター", sheet: "men", sprite: 6 },
+  { id: "m8", name: "樹", gender: "男性", hobby: "ギター", dreamJob: "ミュージシャン", sheet: "men", sprite: 7 },
+  { id: "f1", name: "ひなた", gender: "女性", hobby: "ヨガ", dreamJob: "フィットネストレーナー", sheet: "women", sprite: 0 },
+  { id: "f2", name: "美月", gender: "女性", hobby: "写真", dreamJob: "フォトグラファー", sheet: "women", sprite: 1 },
+  { id: "f3", name: "凛", gender: "女性", hobby: "ファッション", dreamJob: "ジュエリーデザイナー", sheet: "women", sprite: 2 },
+  { id: "f4", name: "結衣", gender: "女性", hobby: "料理", dreamJob: "シェフ", sheet: "women", sprite: 3 },
+  { id: "f5", name: "咲良", gender: "女性", hobby: "イラスト", dreamJob: "イラストレーター", sheet: "women", sprite: 4 },
+  { id: "f6", name: "葵", gender: "女性", hobby: "文房具集め", dreamJob: "編集者", sheet: "women", sprite: 5 },
+  { id: "f7", name: "澪", gender: "女性", hobby: "ドライブ", dreamJob: "モータージャーナリスト", sheet: "women", sprite: 6 },
+  { id: "f8", name: "琴音", gender: "女性", hobby: "ガーデニング", dreamJob: "植物研究者", sheet: "women", sprite: 7 },
+];
+
+const CHARACTER_BY_ID = Object.fromEntries(CHARACTER_PROFILES.map((profile) => [profile.id, profile]));
+const DEFAULT_CHARACTER_IDS = ["m1", "f1", "m2", "f2"];
+const DEFAULT_NAMES = DEFAULT_CHARACTER_IDS.map((id) => CHARACTER_BY_ID[id].name);
 const STARTING_CASH = 120000;
 const GOAL_ID = "goal";
 
@@ -25,7 +46,7 @@ const SPACES = [
   { id: "college-3", label: "研究発表", sub: "チャンス", icon: "🔭", type: "chance", grid: [5, 3], next: "college-4" },
   { id: "college-4", label: "卒業旅行", sub: "思い出", icon: "🧳", type: "event", amount: -10000, grid: [4, 4], next: "college-5" },
   { id: "college-5", label: "内定！", sub: "スタート", icon: "✦", type: "event", amount: 26000, grid: [4, 5], next: "city-join" },
-  { id: "work-1", label: "入社", sub: "スタート", icon: "🏢", type: "event", amount: 15000, grid: [8, 3], next: "work-2" },
+  { id: "work-1", label: "入社", sub: "新しい職場", icon: "🏢", type: "event", amount: 15000, eventScene: "building", grid: [8, 3], next: "work-2" },
   { id: "work-2", label: "初ボーナス", sub: "ラッキー", icon: "🎁", type: "event", amount: 18000, grid: [8, 4], next: "work-3" },
   { id: "work-3", label: "先輩の助言", sub: "いいこと", icon: "💬", type: "event", amount: 8000, grid: [7, 5], next: "work-4" },
   { id: "work-4", label: "スキルアップ", sub: "自己投資", icon: "💡", type: "event", amount: -7000, grid: [6, 5], next: "work-5" },
@@ -45,10 +66,10 @@ const SPACES = [
   { id: "urban-1", label: "シェアライフ", sub: "仲間", icon: "🪴", type: "event", amount: 12000, grid: [3, 12], next: "urban-2" },
   { id: "urban-2", label: "まちの祭り", sub: "たのしい", icon: "🎪", type: "event", amount: 9000, grid: [3, 13], next: "urban-3" },
   { id: "urban-3", label: "屋上カフェ", sub: "出会い", icon: "☕", type: "chance", grid: [4, 14], next: "urban-4" },
-  { id: "urban-4", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [5, 14], next: "urban-5" },
+  { id: "urban-4", label: "憧れのマイカー", sub: "大きな買い物", icon: "🏎", type: "event", amount: -30000, eventScene: "purchase", grid: [5, 14], next: "urban-5" },
   { id: "urban-5", label: "引っ越し祝い", sub: "いいこと", icon: "🎀", type: "event", amount: 17000, grid: [6, 13], next: "urban-6" },
   { id: "urban-6", label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -9000, grid: [7, 12], next: "life-join" },
-  { id: "home-1", label: "リノベ計画", sub: "自己投資", icon: "🔨", type: "event", amount: -16000, grid: [5, 10], next: "home-2" },
+  { id: "home-1", label: "リノベ計画", sub: "大きな住まい", icon: "🔨", type: "event", amount: -16000, eventScene: "building", grid: [5, 10], next: "home-2" },
   { id: "home-2", label: "家庭菜園", sub: "いいこと", icon: "🥕", type: "event", amount: 12000, grid: [6, 10], next: "home-3" },
   { id: "home-3", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [7, 10], next: "life-join" },
   { id: "life-join", label: "特別な出会い", sub: "人生イベント", icon: "💍", type: "family", familyAction: "partner", amount: 18000, grid: [8, 11], next: "family-1" },
@@ -65,7 +86,7 @@ const SPACES = [
   { id: "challenge-1", label: "大きな挑戦", sub: "勝負", icon: "⚡", type: "chance", grid: [9, 7], next: "challenge-2" },
   { id: "challenge-2", label: "新プロジェクト", sub: "チャンス", icon: "🛠", type: "event", amount: 25000, grid: [9, 6], next: "challenge-3" },
   { id: "challenge-3", label: "ごほうび旅行", sub: "思い出", icon: "🌴", type: "event", amount: -12000, grid: [10, 5], next: "challenge-4" },
-  { id: "challenge-4", label: "大成功！", sub: "ラッキー", icon: "🏅", type: "event", amount: 40000, grid: [11, 4], next: "last-join" },
+  { id: "challenge-4", label: "大成功！", sub: "大金を獲得", icon: "🏅", type: "event", amount: 40000, eventScene: "windfall", grid: [11, 4], next: "last-join" },
   { id: "relax-1", label: "家族の時間", sub: "しあわせ", icon: "🌼", type: "event", amount: 21000, grid: [11, 7], next: "relax-2" },
   { id: "relax-2", label: "好きな景色", sub: "思い出", icon: "🌅", type: "event", amount: 14000, grid: [11, 6], next: "relax-3" },
   { id: "relax-3", label: "小さな贅沢", sub: "いいこと", icon: "🍰", type: "event", amount: 9000, grid: [12, 5], next: "relax-4" },
@@ -97,12 +118,19 @@ const BRANCH_SIGNPOSTS = [
 ];
 
 const CHANCE_CARDS = [
-  { title: "懸賞に当選！", amount: 40000 },
+  { title: "懸賞に当選！", amount: 40000, eventScene: "windfall" },
   { title: "友人の助け", amount: 18000 },
-  { title: "予定外の修理", amount: -26000 },
-  { title: "とっておきの副収入", amount: 30000 },
+  { title: "予定外の修理", amount: -26000, eventScene: "loss" },
+  { title: "とっておきの副収入", amount: 30000, eventScene: "windfall" },
   { title: "うっかり出費", amount: -14000 },
 ];
+
+const EVENT_SCENES = {
+  building: { kicker: "BUILDING EVENT", label: "建物や住まいを手に入れるイベント" },
+  purchase: { kicker: "BIG PURCHASE", label: "大きな買い物をするイベント" },
+  windfall: { kicker: "BIG WIN", label: "大金を手に入れるイベント" },
+  loss: { kicker: "BIG LOSS", label: "大きなお金を失うイベント" },
+};
 
 const elements = {
   board: document.querySelector("#board"),
@@ -115,13 +143,22 @@ const elements = {
   eventFeed: document.querySelector("#event-feed"),
   setupModal: document.querySelector("#setup-modal"),
   choiceModal: document.querySelector("#choice-modal"),
+  eventModal: document.querySelector("#event-modal"),
   resultModal: document.querySelector("#result-modal"),
   helpModal: document.querySelector("#help-modal"),
+  setupPlayerTabs: document.querySelector("#setup-player-tabs"),
   nameFields: document.querySelector("#name-fields"),
+  characterGrid: document.querySelector("#character-grid"),
   setupForm: document.querySelector("#setup-form"),
   choiceTitle: document.querySelector("#choice-title"),
   choiceDescription: document.querySelector("#choice-description"),
   choiceOptions: document.querySelector("#choice-options"),
+  eventScene: document.querySelector("#event-scene"),
+  eventKicker: document.querySelector("#event-kicker"),
+  eventTitle: document.querySelector("#event-title"),
+  eventDescription: document.querySelector("#event-description"),
+  eventAmount: document.querySelector("#event-amount"),
+  eventContinue: document.querySelector("#event-continue"),
   resultsList: document.querySelector("#results-list"),
   toast: document.querySelector("#toast"),
 };
@@ -132,9 +169,12 @@ const state = {
   dice: 1,
   isBusy: false,
   pendingChoice: null,
+  pendingEvent: null,
   feed: [],
   playerCount: 2,
   setupNames: [...DEFAULT_NAMES],
+  setupCharacters: [...DEFAULT_CHARACTER_IDS],
+  activeSetupPlayer: 0,
 };
 
 function money(amount) {
@@ -146,6 +186,18 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
   }[character]));
+}
+
+function characterProfile(characterId) {
+  return CHARACTER_BY_ID[characterId] || CHARACTER_PROFILES[0];
+}
+
+function portraitMarkup(profile, className = "", label = `${profile.name}のバストアップ画像`) {
+  const column = profile.sprite % 4;
+  const row = Math.floor(profile.sprite / 4);
+  const x = (column / 3) * 100;
+  const y = row * 100;
+  return `<span class="character-portrait portrait-${profile.sheet} ${className}" style="--portrait-x:${x}%;--portrait-y:${y}%" role="img" aria-label="${escapeHtml(label)}"></span>`;
 }
 
 function currentPlayer() {
@@ -225,10 +277,10 @@ function renderBoard() {
 function renderPlayers() {
   elements.playerList.innerHTML = state.players.map((player, index) => `
     <article class="player-card ${index === state.currentIndex && !player.finished ? "is-current" : ""} ${player.finished ? "is-finished" : ""}">
-      <span class="player-color" style="background:${player.color}"></span>
+      ${portraitMarkup(characterProfile(player.characterId), "player-avatar", `${player.name}のキャラクター`)}
       <div class="player-info">
-        <div class="player-name">${escapeHtml(player.name)} ${player.finished ? `<span class="finish-badge">GOAL ${player.finishOrder}位</span>` : ""}</div>
-        <div class="player-job">${escapeHtml(player.job)} · ${familySummary(player)}</div>
+        <div class="player-name"><span class="player-color" style="background:${player.color}"></span>${escapeHtml(player.name)} ${player.finished ? `<span class="finish-badge">GOAL ${player.finishOrder}位</span>` : ""}</div>
+        <div class="player-job">夢：${escapeHtml(player.dreamJob)} · ${familySummary(player)}</div>
       </div>
       <div class="player-money">${money(player.cash)}</div>
     </article>`).join("");
@@ -241,14 +293,15 @@ function renderCurrentPlayer() {
   const next = nextSpaceId(player) ? SPACE_BY_ID[nextSpaceId(player)] : null;
   elements.currentPlayerCard.innerHTML = `
     <div class="current-player-top">
-      <div class="current-player-name"><span class="current-player-color" style="background:${player.color}"></span>${escapeHtml(player.name)}の番</div>
+      <div class="current-player-name">${portraitMarkup(characterProfile(player.characterId), "current-player-avatar", `${player.name}のキャラクター`)}<span><i class="current-player-color" style="background:${player.color}"></i>${escapeHtml(player.name)}の番</span></div>
       <span class="current-player-position">${player.steps} マス目</span>
     </div>
     <div class="current-player-money">${money(player.cash)}</div>
-    <div class="current-player-job">${escapeHtml(player.job)} · 毎回の収入 ${money(player.salary)}</div>
+    <div class="current-player-job">趣味：${escapeHtml(player.hobby)} · 夢：${escapeHtml(player.dreamJob)}<br />毎回の収入 ${money(player.salary)}</div>
     <div class="family-meter">${carMarkup(player)}<span>${familySummary(player)}</span></div>`;
   elements.turnBanner.innerHTML = `<span class="turn-color" style="background:${player.color}"></span><strong>${escapeHtml(player.name)}</strong> の番です。${space.routeOptions ? "進路を決めて、次の人生へ。" : "運命のサイコロを振ろう。"}`;
   elements.rollButton.disabled = state.isBusy || player.finished;
+  elements.rollButton.setAttribute("aria-label", `${player.name}さんのサイコロを振る`);
   elements.rollButton.innerHTML = state.isBusy ? `<span class="button-icon" aria-hidden="true">⌁</span>人生を進めています` : `<span class="button-icon" aria-hidden="true">✦</span>サイコロを振る`;
   elements.rollHint.textContent = state.isBusy ? "オープンカーがマス目を進んでいます…" : next ? `次は「${next.label}」の方向へ。` : "分岐で行き先を選んでください。";
 }
@@ -279,31 +332,93 @@ function toast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("is-visible"), 2600);
 }
 
+function normalizeSetupCharacters() {
+  const usedCharacters = new Set();
+  for (let index = 0; index < state.playerCount; index += 1) {
+    const previousProfile = characterProfile(state.setupCharacters[index]);
+    if (!state.setupCharacters[index] || usedCharacters.has(state.setupCharacters[index])) {
+      const replacement = CHARACTER_PROFILES.find((profile) => !usedCharacters.has(profile.id));
+      state.setupCharacters[index] = replacement.id;
+      if (state.setupNames[index] === previousProfile.name) state.setupNames[index] = replacement.name;
+    }
+    usedCharacters.add(state.setupCharacters[index]);
+  }
+}
+
 function renderSetup() {
+  normalizeSetupCharacters();
+  state.activeSetupPlayer = Math.min(state.activeSetupPlayer, state.playerCount - 1);
   document.querySelectorAll("[data-player-count]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.playerCount) === state.playerCount));
-  elements.nameFields.innerHTML = Array.from({ length: state.playerCount }, (_, index) => `<label class="name-field"><span class="name-field-dot" style="background:${PLAYER_COLORS[index].value}"></span><input name="player-${index}" maxlength="12" value="${escapeHtml(state.setupNames[index])}" aria-label="${index + 1}人目の名前" /></label>`).join("");
+  elements.setupPlayerTabs.innerHTML = Array.from({ length: state.playerCount }, (_, index) => {
+    const profile = characterProfile(state.setupCharacters[index]);
+    return `<button class="setup-player-tab ${index === state.activeSetupPlayer ? "is-active" : ""}" type="button" data-setup-player="${index}" aria-pressed="${index === state.activeSetupPlayer}">
+      ${portraitMarkup(profile, "setup-tab-avatar", `${index + 1}人目：${state.setupNames[index]}`)}
+      <span>PLAYER ${index + 1}<strong data-setup-player-name="${index}">${escapeHtml(state.setupNames[index])}</strong></span>
+    </button>`;
+  }).join("");
+
+  const activeIndex = state.activeSetupPlayer;
+  const activeProfile = characterProfile(state.setupCharacters[activeIndex]);
+  elements.nameFields.innerHTML = `
+    ${portraitMarkup(activeProfile, "setup-featured-portrait")}
+    <div class="setup-profile-copy">
+      <label class="profile-name-field">
+        <span><i style="background:${PLAYER_COLORS[activeIndex].value}"></i>プレイヤー名</span>
+        <input id="active-player-name" maxlength="12" value="${escapeHtml(state.setupNames[activeIndex])}" aria-label="${activeIndex + 1}人目の名前" />
+      </label>
+      <dl class="setup-profile-details">
+        <div><dt>趣味</dt><dd>${escapeHtml(activeProfile.hobby)}</dd></div>
+        <div><dt>将来なりたい職業</dt><dd>${escapeHtml(activeProfile.dreamJob)}</dd></div>
+      </dl>
+    </div>`;
+
+  elements.characterGrid.innerHTML = CHARACTER_PROFILES.map((profile) => {
+    const assignedPlayer = state.setupCharacters.slice(0, state.playerCount).findIndex((characterId) => characterId === profile.id);
+    const isCurrent = profile.id === activeProfile.id;
+    const isTaken = assignedPlayer !== -1 && assignedPlayer !== activeIndex;
+    return `<label class="character-card ${isCurrent ? "is-selected" : ""} ${isTaken ? "is-taken" : ""}" for="character-${profile.id}">
+      <input class="character-radio" id="character-${profile.id}" type="radio" name="character-selection" value="${profile.id}" ${isCurrent ? "checked" : ""} ${isTaken ? "disabled" : ""} />
+      ${portraitMarkup(profile, "character-card-portrait")}
+      <span class="character-card-copy">
+        <span class="character-card-heading"><strong>${escapeHtml(profile.name)}</strong><small>${escapeHtml(profile.gender)}</small></span>
+        <span><b>趣味</b>${escapeHtml(profile.hobby)}</span>
+        <span><b>夢</b>${escapeHtml(profile.dreamJob)}</span>
+      </span>
+      ${isTaken ? `<span class="character-taken">PLAYER ${assignedPlayer + 1}</span>` : ""}
+    </label>`;
+  }).join("");
 }
 
 function openSetup() {
   state.playerCount = state.players.length || state.playerCount;
-  if (state.players.length) state.setupNames = Array.from({ length: 4 }, (_, index) => state.players[index]?.name || DEFAULT_NAMES[index]);
+  state.activeSetupPlayer = 0;
+  if (state.players.length) {
+    state.setupNames = Array.from({ length: 4 }, (_, index) => state.players[index]?.name || state.setupNames[index] || DEFAULT_NAMES[index]);
+    state.setupCharacters = Array.from({ length: 4 }, (_, index) => state.players[index]?.characterId || state.setupCharacters[index] || DEFAULT_CHARACTER_IDS[index]);
+  }
   renderSetup();
   elements.setupModal.classList.remove("is-hidden");
 }
 
 function startGame(event) {
   event.preventDefault();
-  const formData = new FormData(elements.setupForm);
-  const names = Array.from({ length: state.playerCount }, (_, index) => String(formData.get(`player-${index}`) || "").trim() || DEFAULT_NAMES[index]);
+  const activeName = elements.nameFields.querySelector("#active-player-name");
+  if (activeName) state.setupNames[state.activeSetupPlayer] = activeName.value.trim() || characterProfile(state.setupCharacters[state.activeSetupPlayer]).name;
+  const names = Array.from({ length: state.playerCount }, (_, index) => state.setupNames[index].trim() || characterProfile(state.setupCharacters[index]).name);
   state.setupNames = Array.from({ length: 4 }, (_, index) => names[index] || state.setupNames[index] || DEFAULT_NAMES[index]);
-  state.players = names.map((name, index) => ({
-    id: index, name, color: PLAYER_COLORS[index].value, cash: STARTING_CASH, salary: 30000, job: "これからの人", spaceId: "start", steps: 0,
-    routes: {}, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
-  }));
+  state.players = names.map((name, index) => {
+    const profile = characterProfile(state.setupCharacters[index]);
+    return {
+      id: index, name, characterId: profile.id, hobby: profile.hobby, dreamJob: profile.dreamJob, color: PLAYER_COLORS[index].value,
+      cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, spaceId: "start", steps: 0,
+      routes: {}, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
+    };
+  });
   state.currentIndex = 0;
   state.dice = 1;
   state.isBusy = false;
   state.pendingChoice = null;
+  state.pendingEvent = null;
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
   elements.setupModal.classList.add("is-hidden");
@@ -362,6 +477,38 @@ function resolveFamilyEvent(player, space) {
   return true;
 }
 
+function eventDescription(scene, player, title) {
+  const descriptions = {
+    building: `${player.name}の人生に新しい拠点ができました。「${title}」を記念して一枚！`,
+    purchase: `${player.name}は思いきって大きな買い物。「${title}」が暮らしを変えます。`,
+    windfall: `${player.name}に大きな幸運が到来！ 「${title}」で資産がぐっと増えました。`,
+    loss: `${player.name}に予想外の出費。「${title}」を乗り越えて、次の一歩へ。`,
+  };
+  return descriptions[scene];
+}
+
+function openLifeEvent(player, { scene, title, amount }) {
+  const sceneConfig = EVENT_SCENES[scene];
+  if (!sceneConfig) return false;
+  state.pendingEvent = { playerId: player.id, scene };
+  elements.eventScene.className = `event-scene event-scene--${scene}`;
+  elements.eventScene.setAttribute("aria-label", sceneConfig.label);
+  elements.eventKicker.textContent = sceneConfig.kicker;
+  elements.eventTitle.textContent = title;
+  elements.eventDescription.textContent = eventDescription(scene, player, title);
+  elements.eventAmount.className = `event-amount ${amount < 0 ? "is-negative" : "is-positive"}`;
+  elements.eventAmount.textContent = `${amount >= 0 ? "+" : ""}${money(amount)}`;
+  elements.eventModal.classList.remove("is-hidden");
+  return true;
+}
+
+function continueAfterLifeEvent() {
+  if (!state.pendingEvent) return;
+  state.pendingEvent = null;
+  elements.eventModal.classList.add("is-hidden");
+  finishTurn();
+}
+
 function resolveLanding(player) {
   const space = currentSpace(player);
   if (space.id === GOAL_ID) {
@@ -371,7 +518,7 @@ function resolveLanding(player) {
     changeMoney(player, finishBonus);
     addFeed(`${player.name}が${player.finishOrder}番目にゴール！ ボーナス ${money(finishBonus)}。`, "choice-dot");
     toast(`${player.name}、ゴール！ おつかれさま！`);
-    finishTurn();
+    openLifeEvent(player, { scene: "windfall", title: `${player.finishOrder}番目にゴール！`, amount: finishBonus });
     return;
   }
   if (space.routeOptions) {
@@ -386,6 +533,7 @@ function resolveLanding(player) {
     const chance = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
     changeMoney(player, chance.amount);
     addFeed(`${player.name}：${chance.title} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`, chance.amount < 0 ? "negative" : "");
+    if (chance.eventScene && openLifeEvent(player, { scene: chance.eventScene, title: chance.title, amount: chance.amount })) return;
     toast(`${chance.title} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`);
   } else if (space.type === "family") {
     resolveFamilyEvent(player, space);
@@ -393,6 +541,7 @@ function resolveLanding(player) {
     const amount = space.amount || 0;
     changeMoney(player, amount);
     addFeed(`${player.name}：${space.label} ${amount >= 0 ? "+" : ""}${money(amount)}`, amount < 0 ? "negative" : "");
+    if (space.eventScene && openLifeEvent(player, { scene: space.eventScene, title: space.label, amount })) return;
     toast(`${space.label} ${amount >= 0 ? "+" : ""}${money(amount)}`);
   }
   finishTurn();
@@ -440,9 +589,34 @@ function showResults() {
   elements.resultModal.classList.remove("is-hidden");
 }
 
-document.querySelectorAll("[data-player-count]").forEach((button) => button.addEventListener("click", () => { state.playerCount = Number(button.dataset.playerCount); renderSetup(); }));
+document.querySelectorAll("[data-player-count]").forEach((button) => button.addEventListener("click", () => {
+  state.playerCount = Number(button.dataset.playerCount);
+  renderSetup();
+}));
+elements.setupPlayerTabs.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-setup-player]");
+  if (!tab) return;
+  state.activeSetupPlayer = Number(tab.dataset.setupPlayer);
+  renderSetup();
+});
+elements.characterGrid.addEventListener("change", (event) => {
+  if (!event.target.matches(".character-radio")) return;
+  const activeIndex = state.activeSetupPlayer;
+  const previousProfile = characterProfile(state.setupCharacters[activeIndex]);
+  const nextProfile = characterProfile(event.target.value);
+  if (state.setupNames[activeIndex] === previousProfile.name) state.setupNames[activeIndex] = nextProfile.name;
+  state.setupCharacters[activeIndex] = nextProfile.id;
+  renderSetup();
+});
+elements.nameFields.addEventListener("input", (event) => {
+  if (event.target.id !== "active-player-name") return;
+  state.setupNames[state.activeSetupPlayer] = event.target.value;
+  const tabName = elements.setupPlayerTabs.querySelector(`[data-setup-player-name="${state.activeSetupPlayer}"]`);
+  if (tabName) tabName.textContent = event.target.value || characterProfile(state.setupCharacters[state.activeSetupPlayer]).name;
+});
 elements.setupForm.addEventListener("submit", startGame);
 elements.rollButton.addEventListener("click", rollDice);
+elements.eventContinue.addEventListener("click", continueAfterLifeEvent);
 document.querySelector("#new-game-button").addEventListener("click", openSetup);
 document.querySelector("#play-again-button").addEventListener("click", openSetup);
 document.querySelector("#help-button").addEventListener("click", () => elements.helpModal.classList.remove("is-hidden"));
