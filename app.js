@@ -31,6 +31,7 @@ const STARTING_CASH = 120000;
 const GOAL_ID = "goal";
 const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
 const CASINO_LOSS_AMOUNT = -10000000;
+const MOBILE_LAYOUT_QUERY = "(max-width: 760px), (max-width: 900px) and (max-height: 500px)";
 
 const LEGACY_SPACES = [
   { id: "start", label: "START", sub: "出発", icon: "🏁", type: "start", grid: [11, 1], next: "first-payday" },
@@ -773,7 +774,7 @@ function startGame(event) {
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
   if (state.course.seed) addFeed(`HEXコース #${state.course.seed} を生成。分岐の先には別の人生が待っています。`, "choice-dot");
-  elements.playerDetails.open = !window.matchMedia("(max-width: 760px)").matches;
+  elements.playerDetails.open = !window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
   elements.setupModal.classList.add("is-hidden");
   elements.resultModal.classList.add("is-hidden");
   render();
@@ -795,7 +796,7 @@ function rollDice() {
 }
 
 function movementStepDelay() {
-  return window.matchMedia("(max-width: 760px)").matches ? 330 : 190;
+  return window.matchMedia(MOBILE_LAYOUT_QUERY).matches ? 330 : 190;
 }
 
 function moveStep(remaining) {
@@ -1372,7 +1373,7 @@ document.addEventListener("keydown", (event) => {
   closeMobileGameMenu();
 });
 
-if (window.matchMedia("(max-width: 760px)").matches) elements.playerDetails.open = false;
+if (window.matchMedia(MOBILE_LAYOUT_QUERY).matches) elements.playerDetails.open = false;
 renderSetup();
 startGame(new Event("submit"));
 elements.setupModal.classList.remove("is-hidden");
