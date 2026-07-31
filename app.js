@@ -338,6 +338,37 @@ function nextSpaceId(player) {
   return space.routeOptions ? player.routes[space.id] : space.next;
 }
 
+function remainingStepsToGoal(player) {
+  let spaceId = player.spaceId;
+  let remaining = 0;
+  const visited = new Set();
+
+  while (spaceId) {
+    if (visited.has(spaceId)) return null;
+    visited.add(spaceId);
+
+    const space = activeSpaceById(spaceId);
+    if (!space) return null;
+    if (space.type === "goal") return remaining;
+
+    const nextId = space.routeOptions
+      ? player.routes[space.id] || space.routeOptions[0]?.next
+      : space.next;
+    if (!nextId) return null;
+
+    spaceId = nextId;
+    remaining += 1;
+  }
+
+  return null;
+}
+
+function remainingStepsLabel(player) {
+  if (player.finished) return "ゴール済み";
+  const remaining = remainingStepsToGoal(player);
+  return Number.isInteger(remaining) ? `ゴールまであと${remaining}マス` : "ゴールまでの道を確認中";
+}
+
 function diceMarkup(value) {
   const visiblePips = {
     1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
@@ -475,6 +506,7 @@ function renderPlayers() {
       <div class="player-info">
         <div class="player-name"><span class="player-color" style="background:${player.color}"></span>${escapeHtml(player.name)} ${player.finished ? `<span class="finish-badge">GOAL ${player.finishOrder}位</span>` : ""}</div>
         <div class="player-job">夢：${escapeHtml(player.dreamJob)} · ${familySummary(player)}</div>
+        <div class="player-remaining">${remainingStepsLabel(player)}</div>
       </div>
       <div class="player-money">${money(player.cash)}</div>
     </article>`).join("");
@@ -495,10 +527,15 @@ function renderCurrentPlayer() {
   const next = nextSpaceId(player) ? activeSpaceById(nextSpaceId(player)) : null;
   elements.currentPlayerCard.innerHTML = `
     <div class="current-player-top">
-      <div class="current-player-name">${portraitMarkup(characterProfile(player.characterId), "current-player-avatar", `${player.name}のキャラクター`)}<span><i class="current-player-color" style="background:${player.color}"></i>${escapeHtml(player.name)}の番</span></div>
+      <div class="current-player-name">
+        ${portraitMarkup(characterProfile(player.characterId), "current-player-avatar", `${player.name}のキャラクター`)}
+        <span class="current-player-summary">
+          <span class="current-player-label"><i class="current-player-color" style="background:${player.color}"></i>${escapeHtml(player.name)}</span>
+          <span class="current-player-money">${money(player.cash)}</span>
+        </span>
+      </div>
       <span class="current-player-position">${player.steps} マス目</span>
     </div>
-    <div class="current-player-money">${money(player.cash)}</div>
     <div class="current-player-job">趣味：${escapeHtml(player.hobby)} · 夢：${escapeHtml(player.dreamJob)}<br />毎回の収入 ${money(player.salary)}</div>
     <div class="family-meter">${carMarkup(player)}<span>${familySummary(player)}</span></div>`;
   const course = activeCourse();
