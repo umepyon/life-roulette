@@ -30,7 +30,7 @@ const DEFAULT_NAMES = DEFAULT_CHARACTER_IDS.map((id) => CHARACTER_BY_ID[id].name
 const STARTING_CASH = 120000;
 const GOAL_ID = "goal";
 const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
-const GOAL_BONUS_AMOUNTS = { 1: 1000000, 2: 2000000, 3: 3000000, 4: 5000000, 5: 7000000, 6: 10000000 };
+const CASINO_LOSS_AMOUNT = -10000000;
 
 const LEGACY_SPACES = [
   { id: "start", label: "START", sub: "出発", icon: "🏁", type: "start", grid: [11, 1], next: "first-payday" },
@@ -44,7 +44,7 @@ const LEGACY_SPACES = [
     ],
   },
   { id: "college-1", label: "キャンパス", sub: "学び", icon: "📚", type: "event", amount: -8000, grid: [7, 2], next: "college-2" },
-  { id: "college-2", label: "新しい友だち", sub: "いいこと", icon: "☀", type: "event", amount: 12000, grid: [6, 2], next: "college-3" },
+  { id: "college-2", label: "3マスもどる", sub: "思わぬ遠回り", icon: "↩", type: "move-back", moveBack: 3, grid: [6, 2], next: "college-3" },
   { id: "college-3", label: "研究発表", sub: "チャンス", icon: "🔭", type: "chance", grid: [5, 3], next: "college-4" },
   { id: "college-4", label: "卒業旅行", sub: "思い出", icon: "🧳", type: "event", amount: -10000, grid: [4, 4], next: "college-5" },
   { id: "college-5", label: "内定！", sub: "スタート", icon: "✦", type: "event", amount: 26000, grid: [4, 5], next: "city-join" },
@@ -55,7 +55,7 @@ const LEGACY_SPACES = [
   { id: "work-5", label: "昇進", sub: "チャンス", icon: "📈", type: "chance", grid: [5, 6], next: "city-join" },
   { id: "city-join", label: "まちへ", sub: "合流", icon: "🏙", type: "event", amount: 10000, grid: [4, 6], next: "city-1" },
   { id: "city-1", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [4, 7], next: "city-2" },
-  { id: "city-2", label: "趣味の時間", sub: "出会い", icon: "🎸", type: "event", amount: 7000, grid: [3, 8], next: "city-3" },
+  { id: "city-2", label: "1回休み", sub: "ひと休み", icon: "💤", type: "skip-turn", skipTurns: 1, grid: [3, 8], next: "city-3" },
   { id: "city-3", label: "キャリアの転機", sub: "チャンス", icon: "🚀", type: "chance", grid: [3, 9], next: "city-4" },
   { id: "city-4", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [3, 10], next: "home-fork" },
   {
@@ -77,7 +77,7 @@ const LEGACY_SPACES = [
   { id: "life-join", label: "結婚！", sub: "人生イベント", icon: "💍", type: "family", familyAction: "partner", amount: 18000, grid: [8, 11], next: "family-1" },
   { id: "family-1", label: "第一子誕生", sub: "家族が増える", icon: "🍼", type: "family", familyAction: "child", amount: 10000, grid: [9, 11], next: "family-2" },
   { id: "family-2", label: "第二子誕生", sub: "家族が増える", icon: "🧸", type: "family", familyAction: "child", amount: 8000, grid: [9, 10], next: "family-3" },
-  { id: "family-3", label: "家族の休日", sub: "しあわせ", icon: "🎠", type: "event", amount: 15000, grid: [10, 9], next: "dream-fork" },
+  { id: "family-3", label: "先頭と入れ替え", sub: "人生の大逆転", icon: "⇆", type: "swap-leader", grid: [10, 9], next: "dream-fork" },
   {
     id: "dream-fork", label: "未来の分岐", sub: "夢を選ぶ", icon: "✦", type: "branch", grid: [10, 8],
     routeOptions: [
@@ -95,7 +95,7 @@ const LEGACY_SPACES = [
   { id: "relax-4", label: "みんなの笑顔", sub: "しあわせ", icon: "☺", type: "event", amount: 18000, grid: [12, 4], next: "last-join" },
   { id: "last-join", label: "ラストスパート", sub: "合流", icon: "🏎", type: "chance", grid: [11, 3], next: "final-1" },
   { id: "final-1", label: "感謝を伝える", sub: "いいこと", icon: "💌", type: "event", amount: 13000, grid: [12, 3], next: "final-2" },
-  { id: "final-2", label: "あと一歩", sub: "ゴール前", icon: "✨", type: "event", amount: 10000, grid: [12, 2], next: GOAL_ID },
+  { id: "final-2", label: "スタートに戻る", sub: "所持金が半分に", icon: "⏪", type: "return-start", grid: [12, 2], next: GOAL_ID },
   { id: GOAL_ID, label: "GOAL", sub: "おつかれさま", icon: "🏆", type: "goal", grid: [12, 1] },
 ];
 
@@ -181,8 +181,12 @@ function buildHexGameCourse() {
   const templates = random.shuffle(GENERATED_EVENT_TEMPLATES);
   const spaceById = {};
   const mainLength = hexCourse.mainRoute.length;
+  const moveBackIndex = 5;
   const partnerIndex = 13;
+  const skipTurnIndex = 14;
+  const swapLeaderIndex = mainLength - 6;
   const childIndex = mainLength - 4;
+  const returnStartIndex = mainLength - 2;
   let templateIndex = 0;
 
   hexCourse.nodes.forEach((node) => {
@@ -193,6 +197,8 @@ function buildHexGameCourse() {
       space = { label: "START", sub: "出発", icon: "🏁", type: "start" };
     } else if (node.id === hexCourse.goalId) {
       space = { label: "GOAL", sub: "おつかれさま", icon: "🏆", type: "goal" };
+    } else if (mainIndex === returnStartIndex) {
+      space = { label: "スタートに戻る", sub: "所持金が半分に", icon: "⏪", type: "return-start" };
     } else if (branchIndex !== undefined) {
       const routeOptions = graph.branchOptionsById[node.id];
       space = {
@@ -205,8 +211,14 @@ function buildHexGameCourse() {
           { title: "寄り道ルート", detail: "景色を変えて、別の出来事へ", next: routeOptions[1], effect: "寄り道ルートを選んだ" },
         ],
       };
+    } else if (mainIndex === moveBackIndex) {
+      space = { label: "3マスもどる", sub: "思わぬ遠回り", icon: "↩", type: "move-back", moveBack: 3 };
     } else if (mainIndex === partnerIndex) {
       space = { label: "結婚！", sub: "人生イベント", icon: "💍", type: "family", familyAction: "partner", amount: 18000 };
+    } else if (mainIndex === skipTurnIndex) {
+      space = { label: "1回休み", sub: "ひと休み", icon: "💤", type: "skip-turn", skipTurns: 1 };
+    } else if (mainIndex === swapLeaderIndex) {
+      space = { label: "先頭と入れ替え", sub: "人生の大逆転", icon: "⇆", type: "swap-leader" };
     } else if (mainIndex === childIndex) {
       space = { label: "第一子誕生", sub: "家族が増える", icon: "🍼", type: "family", familyAction: "child", amount: 10000 };
     } else {
@@ -240,6 +252,13 @@ const elements = {
   dice: document.querySelector("#dice"),
   rollButton: document.querySelector("#roll-button"),
   rollHint: document.querySelector("#roll-hint"),
+  mobileMenuButton: document.querySelector("#mobile-menu-button"),
+  mobileGameMenu: document.querySelector("#mobile-game-menu"),
+  mobileNewGameButton: document.querySelector("#mobile-new-game-button"),
+  boardOverviewButton: document.querySelector("#board-overview-button"),
+  boardOverviewModal: document.querySelector("#board-overview-modal"),
+  boardOverview: document.querySelector("#board-overview"),
+  boardOverviewClose: document.querySelector("#board-overview-close"),
   turnBanner: document.querySelector("#turn-banner"),
   mobileDriveView: document.querySelector("#mobile-drive-view"),
   eventFeed: document.querySelector("#event-feed"),
@@ -497,6 +516,38 @@ function renderBoard() {
   const course = activeCourse();
   if (course.kind === "hex") renderHexBoard(course);
   else renderLegacyBoard();
+  if (!elements.boardOverviewModal.classList.contains("is-hidden")) renderBoardOverview();
+}
+
+function renderBoardOverview() {
+  const boardCopy = elements.board.cloneNode(true);
+  boardCopy.removeAttribute("id");
+  boardCopy.setAttribute("aria-label", "人生ルーレットのボード全体");
+  elements.boardOverview.replaceChildren(boardCopy);
+}
+
+function closeMobileGameMenu() {
+  elements.mobileGameMenu.hidden = true;
+  elements.mobileMenuButton.setAttribute("aria-expanded", "false");
+  elements.mobileMenuButton.setAttribute("aria-label", "ゲームメニューを開く");
+}
+
+function toggleMobileGameMenu() {
+  const willOpen = elements.mobileGameMenu.hidden;
+  elements.mobileGameMenu.hidden = !willOpen;
+  elements.mobileMenuButton.setAttribute("aria-expanded", String(willOpen));
+  elements.mobileMenuButton.setAttribute("aria-label", willOpen ? "ゲームメニューを閉じる" : "ゲームメニューを開く");
+}
+
+function openBoardOverview() {
+  closeMobileGameMenu();
+  renderBoardOverview();
+  elements.boardOverviewModal.classList.remove("is-hidden");
+}
+
+function closeBoardOverview() {
+  elements.boardOverviewModal.classList.add("is-hidden");
+  elements.mobileMenuButton.focus();
 }
 
 function renderPlayers() {
@@ -681,6 +732,7 @@ function renderSetup() {
 }
 
 function openSetup() {
+  closeMobileGameMenu();
   state.playerCount = state.players.length || state.playerCount;
   state.activeSetupPlayer = 0;
   if (state.players.length) {
@@ -708,7 +760,7 @@ function startGame(event) {
     return {
       id: index, name, characterId: profile.id, hobby: profile.hobby, dreamJob: profile.dreamJob, color: PLAYER_COLORS[index].value,
       cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, spaceId: activeCourse().startId, steps: 0,
-      routes: {}, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
+      routes: {}, pathHistory: [activeCourse().startId], skipTurns: 0, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
     };
   });
   state.currentIndex = 0;
@@ -755,6 +807,7 @@ function moveStep(remaining) {
   }
   player.spaceId = nextId;
   player.steps += 1;
+  player.pathHistory.push(nextId);
   const enteredSpace = currentSpace(player);
   const familyEvent = enteredSpace.type === "family" ? resolveFamilyEvent(player, enteredSpace) : null;
   render();
@@ -767,6 +820,88 @@ function moveStep(remaining) {
     return;
   }
   window.setTimeout(() => moveStep(remaining - 1), movementStepDelay());
+}
+
+function movePlayerBack(player, spaces) {
+  const history = Array.isArray(player.pathHistory) ? player.pathHistory : [activeCourse().startId];
+  const actualSteps = Math.min(spaces, Math.max(0, history.length - 1));
+  if (!actualSteps) return 0;
+  player.pathHistory = history.slice(0, -actualSteps);
+  player.spaceId = player.pathHistory[player.pathHistory.length - 1];
+  player.steps = Math.max(0, player.steps - actualSteps);
+  return actualSteps;
+}
+
+function resetPlayerToStart(player) {
+  const startId = activeCourse().startId;
+  player.spaceId = startId;
+  player.steps = 0;
+  player.routes = {};
+  player.pathHistory = [startId];
+}
+
+function leadingOpponent(player) {
+  const opponents = state.players.filter((entry) => entry.id !== player.id && !entry.finished && entry.steps > player.steps);
+  return opponents.sort((first, second) => second.steps - first.steps)[0] || null;
+}
+
+function swapPlayerPositions(player, leader) {
+  [player.spaceId, leader.spaceId] = [leader.spaceId, player.spaceId];
+  [player.steps, leader.steps] = [leader.steps, player.steps];
+  [player.routes, leader.routes] = [leader.routes, player.routes];
+  [player.pathHistory, leader.pathHistory] = [leader.pathHistory, player.pathHistory];
+}
+
+function resolveSpecialSpace(player, space) {
+  if (space.type === "move-back") {
+    const actualSteps = movePlayerBack(player, space.moveBack || 3);
+    const detail = actualSteps ? `${actualSteps}マスもどって、もう一度やり直しです。` : "START地点のため、これ以上はもどれません。";
+    addFeed(`${player.name}は「${space.label}」で${actualSteps}マスもどった。`, "negative");
+    render();
+    return openLifeEvent(player, {
+      scene: "card", title: space.label, amount: 0, amountLabel: actualSteps ? `${actualSteps}マスもどる` : "変化なし", amountTone: "is-neutral", icon: space.icon,
+      description: `${player.name}は${detail}`,
+    });
+  }
+
+  if (space.type === "skip-turn") {
+    const skips = space.skipTurns || 1;
+    player.skipTurns += skips;
+    addFeed(`${player.name}は「${space.label}」。次の番を${skips}回休む。`, "negative");
+    render();
+    return openLifeEvent(player, {
+      scene: "card", title: space.label, amount: 0, amountLabel: `次の番を${skips}回休み`, amountTone: "is-neutral", icon: space.icon,
+      description: `${player.name}は少し休憩。次の番はお休みです。`,
+    });
+  }
+
+  if (space.type === "swap-leader") {
+    const leader = leadingOpponent(player);
+    const detail = leader
+      ? `${leader.name}さんと場所を入れ替えました！`
+      : `${player.name}はすでに一番前。場所は変わりません。`;
+    if (leader) swapPlayerPositions(player, leader);
+    addFeed(`${player.name}の「${space.label}」：${detail}`, "choice-dot");
+    render();
+    return openLifeEvent(player, {
+      scene: "card", title: space.label, amount: 0, amountLabel: leader ? "先頭と入れ替え！" : "あなたが先頭！", amountTone: "is-neutral", icon: space.icon,
+      description: detail,
+    });
+  }
+
+  if (space.type === "return-start") {
+    const previousCash = player.cash;
+    player.cash = Math.trunc(player.cash / 2);
+    resetPlayerToStart(player);
+    addFeed(`${player.name}は「${space.label}」。所持金 ${money(previousCash)} → ${money(player.cash)}でSTARTへ戻った。`, "negative");
+    render();
+    return openLifeEvent(player, {
+      scene: "card", title: space.label, amount: 0, amountLabel: `所持金 ${money(previousCash)} → ${money(player.cash)}`, amountTone: "is-neutral", icon: space.icon,
+      description: `${player.name}はゴール目前でSTARTに戻ります。所持金は半分になりました。`,
+    });
+  }
+
+  return false;
 }
 
 function resolveFamilyEvent(player, space) {
@@ -830,7 +965,7 @@ function openLandingCard(player, space, amount) {
   });
 }
 
-function openLifeEvent(player, { scene, title, amount, resumeSteps = null, followup = null, description = "", icon = "" }) {
+function openLifeEvent(player, { scene, title, amount, amountLabel = "", amountTone = "", resumeSteps = null, followup = null, description = "", icon = "" }) {
   const sceneConfig = EVENT_SCENES[scene];
   if (!sceneConfig) return false;
   state.pendingEvent = { playerId: player.id, scene, resumeSteps, followup };
@@ -840,8 +975,8 @@ function openLifeEvent(player, { scene, title, amount, resumeSteps = null, follo
   elements.eventKicker.textContent = sceneConfig.kicker;
   elements.eventTitle.textContent = title;
   elements.eventDescription.textContent = description || eventDescription(scene, player, title) || "";
-  elements.eventAmount.className = `event-amount ${amount < 0 ? "is-negative" : "is-positive"}`;
-  elements.eventAmount.textContent = `${amount >= 0 ? "+" : ""}${money(amount)}`;
+  elements.eventAmount.className = `event-amount ${amountTone || (amount < 0 ? "is-negative" : "is-positive")}`;
+  elements.eventAmount.textContent = amountLabel || `${amount >= 0 ? "+" : ""}${money(amount)}`;
   elements.eventModal.classList.remove("is-hidden");
   return true;
 }
@@ -973,8 +1108,8 @@ function continueGiftCollection() {
   finishTurn();
 }
 
-function goalBonusFor(roll) {
-  return GOAL_BONUS_AMOUNTS[roll] || GOAL_BONUS_AMOUNTS[1];
+function goalRouletteAmountFor(roll) {
+  return roll === 1 ? CASINO_LOSS_AMOUNT : 0;
 }
 
 function goalSceneFor(player) {
@@ -987,6 +1122,11 @@ function openGoalEvent(player, amount) {
     scene: goalSceneFor(player),
     title: `${player.finishOrder}番目にゴール！`,
     amount,
+    amountLabel: amount === 0 ? "変化なし" : "−1,000万円",
+    amountTone: amount === 0 ? "is-neutral" : "is-negative",
+    description: amount === 0
+      ? `${player.name}は安全な出目でした。ゴール後の所持金は変わりません。`
+      : `${player.name}はゴール後にカジノへ。運命の出目1で1,000万円を失いました。`,
   });
 }
 
@@ -1001,22 +1141,22 @@ function renderGoalBonus() {
   const player = bonus && state.players.find((entry) => entry.id === bonus.playerId);
   if (!bonus || !player) return;
   const isResult = bonus.phase === "result";
-  elements.goalBonusTitle.textContent = `${player.name}さん、1番乗りゴール！`;
+  elements.goalBonusTitle.textContent = `${player.name}さん、ゴール！`;
   elements.goalBonusDescription.textContent = isResult
-    ? `${player.name}さんは、1番乗りボーナスを獲得しました！`
-    : "サイコロを振って、100万円〜1,000万円のボーナスを決めましょう。";
+    ? (bonus.amount < 0 ? `${player.name}さんは、カジノで大損してしまいました…。` : `${player.name}さんは、安全な出目でした！`)
+    : "ゴール後の運命サイコロを振ります。出目1だけはカジノで大損！";
   elements.goalBonusDice.innerHTML = diceMarkup(bonus.roll || 1);
   elements.goalBonusDice.classList.toggle("rolling", bonus.phase === "rolling");
   elements.goalBonusResult.textContent = isResult
-    ? `出目 ${bonus.roll}：${money(bonus.amount)} を獲得！`
-    : "大きなボーナスのチャンス！";
+    ? (bonus.amount < 0 ? `出目 ${bonus.roll}：カジノで大損 −1,000万円` : `出目 ${bonus.roll}：変化なし`)
+    : "出目1だけは −1,000万円です。";
   elements.goalBonusRoll.disabled = bonus.phase === "rolling";
-  elements.goalBonusRoll.setAttribute("aria-label", isResult ? "ゴールの結果を見る" : `${player.name}さんが1番乗りボーナスのサイコロを振る`);
+  elements.goalBonusRoll.setAttribute("aria-label", isResult ? "ゴールの結果を見る" : `${player.name}さんがゴール後の運命サイコロを振る`);
   elements.goalBonusRoll.innerHTML = bonus.phase === "rolling"
-    ? `<span class="button-icon" aria-hidden="true">⌁</span>ボーナスを決めています`
+    ? `<span class="button-icon" aria-hidden="true">⌁</span>運命を決めています`
     : isResult
       ? `ゴールの結果を見る <span aria-hidden="true">→</span>`
-      : `ボーナスサイコロを振る <span aria-hidden="true">🎲</span>`;
+      : `運命サイコロを振る <span aria-hidden="true">🎲</span>`;
 }
 
 function rollGoalBonus() {
@@ -1032,10 +1172,12 @@ function settleGoalBonus() {
   const bonus = state.pendingGoalBonus;
   const player = bonus && state.players.find((entry) => entry.id === bonus.playerId);
   if (!bonus || !player || bonus.phase !== "rolling") return;
-  bonus.amount = goalBonusFor(bonus.roll);
-  changeMoney(player, bonus.amount);
+  bonus.amount = goalRouletteAmountFor(bonus.roll);
+  if (bonus.amount) changeMoney(player, bonus.amount);
   bonus.phase = "result";
-  addFeed(`${player.name}は1番乗りボーナス ${money(bonus.amount)} を獲得した！（出目 ${bonus.roll}）`, "choice-dot");
+  addFeed(bonus.amount
+    ? `${player.name}はゴール後の運命サイコロで出目1。カジノで ${money(Math.abs(bonus.amount))} を失った。`
+    : `${player.name}はゴール後の運命サイコロで出目 ${bonus.roll}。所持金は変化なし。`, bonus.amount ? "negative" : "choice-dot");
   render();
   renderGoalBonus();
 }
@@ -1060,21 +1202,16 @@ function resolveLanding(player) {
   if (space.type === "goal") {
     player.finished = true;
     player.finishOrder = state.players.filter((entry) => entry.finished).length;
-    const finishBonus = player.finishOrder === 1 ? 0 : 45000;
-    if (finishBonus) changeMoney(player, finishBonus);
-    addFeed(`${player.name}が${player.finishOrder}番目にゴール！${finishBonus ? ` ボーナス ${money(finishBonus)}。` : " 1番乗りボーナスに挑戦！"}`, "choice-dot");
+    addFeed(`${player.name}が${player.finishOrder}番目にゴール！ ゴール後の運命サイコロへ。`, "choice-dot");
     toast(`${player.name}、ゴール！ おつかれさま！`);
-    if (player.finishOrder === 1) {
-      startGoalBonus(player);
-      return;
-    }
-    openGoalEvent(player, finishBonus);
+    startGoalBonus(player);
     return;
   }
   if (space.routeOptions) {
     openRouteChoice(player, space);
     return;
   }
+  if (resolveSpecialSpace(player, space)) return;
   if (space.type === "money") {
     changeMoney(player, player.salary);
     addFeed(`${player.name}は給料日。${money(player.salary)} を受け取った！`);
@@ -1131,7 +1268,19 @@ function finishTurn() {
     return;
   }
   let nextIndex = state.currentIndex;
-  do nextIndex = (nextIndex + 1) % state.players.length; while (state.players[nextIndex].finished);
+  let checkedPlayers = 0;
+  do {
+    nextIndex = (nextIndex + 1) % state.players.length;
+    const candidate = state.players[nextIndex];
+    if (candidate.finished) continue;
+    if (candidate.skipTurns > 0) {
+      candidate.skipTurns -= 1;
+      checkedPlayers += 1;
+      addFeed(`${candidate.name}は「1回休み」で今回の番を休んだ。`, "negative");
+      continue;
+    }
+    break;
+  } while (checkedPlayers < state.players.length * 2);
   state.currentIndex = nextIndex;
   state.isBusy = false;
   render();
@@ -1189,13 +1338,39 @@ elements.eventContinue.addEventListener("click", continueAfterLifeEvent);
 elements.giftRoll.addEventListener("click", continueGiftCollection);
 elements.goalBonusRoll.addEventListener("click", continueGoalBonus);
 document.querySelector("#new-game-button").addEventListener("click", openSetup);
+elements.mobileMenuButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleMobileGameMenu();
+});
+elements.mobileGameMenu.addEventListener("click", (event) => event.stopPropagation());
+elements.mobileNewGameButton.addEventListener("click", openSetup);
+elements.boardOverviewButton.addEventListener("click", openBoardOverview);
+elements.boardOverviewClose.addEventListener("click", closeBoardOverview);
 document.querySelector("#play-again-button").addEventListener("click", openSetup);
 document.querySelector("#quit-game-button").addEventListener("click", endGame);
 document.querySelector("#help-button").addEventListener("click", () => elements.helpModal.classList.remove("is-hidden"));
 document.querySelector("#help-close").addEventListener("click", () => elements.helpModal.classList.add("is-hidden"));
 document.querySelector("#setup-close").addEventListener("click", () => { if (state.players.length) elements.setupModal.classList.add("is-hidden"); });
 elements.choiceOptions.addEventListener("click", (event) => { const option = event.target.closest("[data-choice-option]"); if (option) chooseOption(Number(option.dataset.choiceOption)); });
-document.querySelectorAll(".modal-backdrop").forEach((backdrop) => backdrop.addEventListener("click", (event) => { if (event.target === backdrop && (backdrop === elements.helpModal || (backdrop === elements.setupModal && state.players.length))) backdrop.classList.add("is-hidden"); }));
+document.querySelectorAll(".modal-backdrop").forEach((backdrop) => backdrop.addEventListener("click", (event) => {
+  if (event.target !== backdrop) return;
+  if (backdrop === elements.boardOverviewModal) {
+    closeBoardOverview();
+    return;
+  }
+  if (backdrop === elements.helpModal || (backdrop === elements.setupModal && state.players.length)) backdrop.classList.add("is-hidden");
+}));
+document.addEventListener("click", (event) => {
+  if (!elements.mobileGameMenu.hidden && !elements.mobileGameMenu.contains(event.target) && !elements.mobileMenuButton.contains(event.target)) closeMobileGameMenu();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!elements.boardOverviewModal.classList.contains("is-hidden")) {
+    closeBoardOverview();
+    return;
+  }
+  closeMobileGameMenu();
+});
 
 if (window.matchMedia("(max-width: 760px)").matches) elements.playerDetails.open = false;
 renderSetup();

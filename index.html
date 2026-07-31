@@ -27,6 +27,13 @@
         <div class="header-actions">
           <button class="text-button" id="help-button" type="button">遊び方</button>
           <button class="new-game-button" id="new-game-button" type="button">新しいゲーム</button>
+          <button class="mobile-menu-button" id="mobile-menu-button" type="button" aria-expanded="false" aria-controls="mobile-game-menu" aria-label="ゲームメニューを開く">
+            <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+          </button>
+          <div class="mobile-game-menu" id="mobile-game-menu" hidden>
+            <button id="mobile-new-game-button" type="button"><span aria-hidden="true">✦</span>新しいゲーム</button>
+            <button id="board-overview-button" type="button"><span aria-hidden="true">⌗</span>ボード全体を表示</button>
+          </div>
         </div>
       </header>
 
@@ -166,13 +173,24 @@
 
     <div class="modal-backdrop is-hidden" id="goal-bonus-modal" role="dialog" aria-modal="true" aria-labelledby="goal-bonus-title">
       <section class="modal goal-bonus-modal-card">
-        <p class="modal-kicker">FIRST PLACE BONUS</p>
-        <h2 id="goal-bonus-title">1番乗りゴール！</h2>
+        <p class="modal-kicker">GOAL ROULETTE</p>
+        <h2 id="goal-bonus-title">ゴールの運命サイコロ</h2>
         <p id="goal-bonus-description" class="modal-lead"></p>
-        <p class="goal-bonus-rule">出目 1〜6：100万 / 200万 / 300万 / 500万 / 700万 / 1,000万円</p>
-        <div id="goal-bonus-dice" class="gift-dice" aria-label="1番ゴールのボーナスサイコロの目" aria-live="polite"></div>
+        <p class="goal-bonus-rule">出目 1：カジノで大損 −1,000万円<br />出目 2〜6：変化なし</p>
+        <div id="goal-bonus-dice" class="gift-dice" aria-label="ゴール後の運命サイコロの目" aria-live="polite"></div>
         <p id="goal-bonus-result" class="gift-result" aria-live="polite"></p>
-        <button id="goal-bonus-roll" class="start-button" type="button">ボーナスサイコロを振る <span aria-hidden="true">🎲</span></button>
+        <button id="goal-bonus-roll" class="start-button" type="button">運命サイコロを振る <span aria-hidden="true">🎲</span></button>
+      </section>
+    </div>
+
+    <div class="modal-backdrop board-overview-backdrop is-hidden" id="board-overview-modal" role="dialog" aria-modal="true" aria-labelledby="board-overview-title">
+      <section class="board-overview-sheet">
+        <div class="board-overview-toolbar">
+          <div><p class="modal-kicker">FULL COURSE MAP</p><h2 id="board-overview-title">ボード全体</h2></div>
+          <button class="board-overview-close" id="board-overview-close" type="button" aria-label="ボード全体表示を閉じる">×</button>
+        </div>
+        <p class="board-overview-hint">横向きの盤面で、全員の現在地と分岐を確認できます。</p>
+        <div class="board-overview-frame"><div id="board-overview" class="board-overview"></div></div>
       </section>
     </div>
 
