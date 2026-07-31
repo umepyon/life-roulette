@@ -1042,7 +1042,9 @@ function giftAmountFor(roll) {
 }
 
 function startGiftCollection(recipientId, { celebration }, resumeSteps = null) {
-  const payerIds = state.players.filter((player) => player.id !== recipientId).map((player) => player.id);
+  const payerIds = state.players
+    .filter((player) => player.id !== recipientId && !player.finished)
+    .map((player) => player.id);
   if (!payerIds.length) {
     if (Number.isInteger(resumeSteps)) window.setTimeout(() => moveStep(resumeSteps), movementStepDelay());
     else finishTurn();
@@ -1318,7 +1320,15 @@ function chooseOption(index) {
 }
 
 function finishTurn() {
-  if (state.players.every((player) => player.finished)) {
+  const unfinishedPlayers = state.players.filter((player) => !player.finished);
+  if (unfinishedPlayers.length <= 1) {
+    const lastPlayer = unfinishedPlayers[0];
+    if (lastPlayer) {
+      lastPlayer.finished = true;
+      lastPlayer.finishOrder = state.players.length;
+      addFeed(`${lastPlayer.name}は、ほかの全員がゴールしたため ${lastPlayer.finishOrder}番目（ビリ）でゴール！`, "negative");
+      toast(`${lastPlayer.name}さんはビリでゴールです。結果を発表します！`);
+    }
     state.isBusy = false;
     render();
     showResults();
