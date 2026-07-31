@@ -138,6 +138,7 @@ const CHANCE_CARDS = [
 ];
 
 const EVENT_SCENES = {
+  card: { kicker: "LIFE SPACE", label: "止まったマスの出来事カード" },
   office: { kicker: "NEW JOB", label: "新しい職場へ向かうイラスト" },
   car: { kicker: "BIG PURCHASE", label: "オープンカーを買うイラスト" },
   home: { kicker: "NEW HOME", label: "マイホームを買うイラスト" },
@@ -430,10 +431,6 @@ function hexPolygonPoints(point, radius = .62) {
   }).join(" ");
 }
 
-function boardLabel(label) {
-  return label.length > 6 ? `${label.slice(0, 5)}…` : label;
-}
-
 function renderHexBoard(course) {
   elements.board.classList.add("board-grid--hex");
   const positions = playerPositions();
@@ -449,9 +446,7 @@ function renderHexBoard(course) {
     const point = pointById[space.id];
     return `<g class="hex-space hex-space--${space.type} ${space.id === activeSpaceId ? "is-current-space" : ""}" role="img" aria-label="${escapeHtml(space.label)}：${escapeHtml(space.sub)}">
       <polygon points="${hexPolygonPoints(point)}" />
-      <text class="hex-space-icon" x="${point.x.toFixed(2)}" y="${(point.y - .13).toFixed(2)}" aria-hidden="true">${space.icon}</text>
-      <text class="hex-space-label" x="${point.x.toFixed(2)}" y="${(point.y + .27).toFixed(2)}">${escapeHtml(boardLabel(space.label))}</text>
-      ${space.routeOptions ? `<text class="hex-branch-mark" x="${(point.x + .4).toFixed(2)}" y="${(point.y - .32).toFixed(2)}" aria-hidden="true">↯</text>` : ""}
+      <text class="hex-space-icon" x="${point.x.toFixed(2)}" y="${point.y.toFixed(2)}" aria-hidden="true">${space.icon}</text>
     </g>`;
   }).join("");
   const tokens = Object.entries(positions).map(([spaceId, players]) => {
@@ -783,15 +778,31 @@ function eventDescription(scene, player, title) {
   return descriptions[scene];
 }
 
-function openLifeEvent(player, { scene, title, amount, resumeSteps = null, followup = null }) {
+function openLandingCard(player, space, amount) {
+  const outcome = amount > 0
+    ? `${money(amount)} を獲得しました。`
+    : amount < 0
+      ? `${money(Math.abs(amount))} の出費です。`
+      : "次の一歩へ進みましょう。";
+  return openLifeEvent(player, {
+    scene: "card",
+    title: space.label,
+    amount,
+    icon: space.icon,
+    description: `${player.name}は「${space.label}」に止まりました。${outcome}`,
+  });
+}
+
+function openLifeEvent(player, { scene, title, amount, resumeSteps = null, followup = null, description = "", icon = "" }) {
   const sceneConfig = EVENT_SCENES[scene];
   if (!sceneConfig) return false;
   state.pendingEvent = { playerId: player.id, scene, resumeSteps, followup };
   elements.eventScene.className = `event-scene event-scene--${scene}`;
+  elements.eventScene.dataset.eventIcon = icon;
   elements.eventScene.setAttribute("aria-label", sceneConfig.label);
   elements.eventKicker.textContent = sceneConfig.kicker;
   elements.eventTitle.textContent = title;
-  elements.eventDescription.textContent = eventDescription(scene, player, title);
+  elements.eventDescription.textContent = description || eventDescription(scene, player, title) || "";
   elements.eventAmount.className = `event-amount ${amount < 0 ? "is-negative" : "is-positive"}`;
   elements.eventAmount.textContent = `${amount >= 0 ? "+" : ""}${money(amount)}`;
   elements.eventModal.classList.remove("is-hidden");
@@ -1030,7 +1041,7 @@ function resolveLanding(player) {
   if (space.type === "money") {
     changeMoney(player, player.salary);
     addFeed(`${player.name}は給料日。${money(player.salary)} を受け取った！`);
-    toast(`給料日！ ${money(player.salary)} を受け取りました。`);
+    if (openLandingCard(player, space, player.salary)) return;
   } else if (space.type === "chance") {
     const chance = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
     changeMoney(player, chance.amount);
@@ -1048,7 +1059,7 @@ function resolveLanding(player) {
     changeMoney(player, amount);
     addFeed(`${player.name}：${space.label} ${amount >= 0 ? "+" : ""}${money(amount)}`, amount < 0 ? "negative" : "");
     if (space.eventScene && openLifeEvent(player, { scene: space.eventScene, title: space.label, amount })) return;
-    toast(`${space.label} ${amount >= 0 ? "+" : ""}${money(amount)}`);
+    if (openLandingCard(player, space, amount)) return;
   }
   finishTurn();
 }
