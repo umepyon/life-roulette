@@ -171,6 +171,43 @@ const GENERATED_EVENT_TEMPLATES = [
   { label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -10000 },
 ];
 
+const FALLBACK_EVENT_CATALOG = Object.freeze({
+  events: GENERATED_EVENT_TEMPLATES,
+  chanceCards: CHANCE_CARDS,
+  source: "fallback",
+});
+let eventCatalog = FALLBACK_EVENT_CATALOG;
+let eventCatalogReady = false;
+
+function weightedShuffle(items, random) {
+  const remaining = [...items];
+  const ordered = [];
+  while (remaining.length) {
+    const totalWeight = remaining.reduce((sum, item) => sum + Math.max(0, Number(item.weight) || 0), 0);
+    let target = random.next() * (totalWeight || remaining.length);
+    let selectedIndex = remaining.length - 1;
+    for (let index = 0; index < remaining.length; index += 1) {
+      target -= Math.max(0, Number(remaining[index].weight) || 1);
+      if (target <= 0) {
+        selectedIndex = index;
+        break;
+      }
+    }
+    ordered.push(remaining.splice(selectedIndex, 1)[0]);
+  }
+  return ordered;
+}
+
+function weightedPick(items) {
+  if (!items.length) return null;
+  const totalWeight = items.reduce((sum, item) => sum + Math.max(0, Number(item.weight) || 0), 0);
+  let target = Math.random() * (totalWeight || items.length);
+  return items.find((item) => {
+    target -= Math.max(0, Number(item.weight) || 1);
+    return target <= 0;
+  }) || items[items.length - 1];
+}
+
 function buildHexGameCourse(courseSize = state.courseSize) {
   const hexApi = globalThis.LifeRouletteHex || globalThis.window?.LifeRouletteHex;
   if (!hexApi) return LEGACY_COURSE;
@@ -179,7 +216,7 @@ function buildHexGameCourse(courseSize = state.courseSize) {
   const random = hexApi.createRandom(`${hexCourse.seed}:events`);
   const mainIndexById = new Map(hexCourse.mainRoute.map((id, index) => [id, index]));
   const branchIndexById = new Map(hexCourse.branches.map((branch, index) => [branch.from, index]));
-  const templates = random.shuffle(GENERATED_EVENT_TEMPLATES);
+  const templates = weightedShuffle(eventCatalog.events, random);
   const spaceById = {};
   const mainLength = hexCourse.mainRoute.length;
   const milestones = hexCourse.size === "small"
@@ -278,6 +315,7 @@ const elements = {
   eventFeed: document.querySelector("#event-feed"),
   setupModal: document.querySelector("#setup-modal"),
   courseSizePicker: document.querySelector("#course-size-picker"),
+  eventCatalogStatus: document.querySelector("#event-catalog-status"),
   choiceModal: document.querySelector("#choice-modal"),
   eventModal: document.querySelector("#event-modal"),
   giftModal: document.querySelector("#gift-modal"),
@@ -716,6 +754,31 @@ function normalizeSetupCharacters() {
   }
 }
 
+function updateEventCatalogStatus(message, tone = "") {
+  if (!elements.eventCatalogStatus) return;
+  elements.eventCatalogStatus.textContent = message;
+  elements.eventCatalogStatus.className = `event-catalog-status ${tone}`.trim();
+}
+
+async function initializeEventCatalog() {
+  const api = globalThis.LifeRouletteEvents || globalThis.window?.LifeRouletteEvents;
+  if (!api?.loadEventCatalog) {
+    eventCatalogReady = true;
+    updateEventCatalogStatus("標準イベントを使用中です。", "is-fallback");
+    return;
+  }
+  const result = await api.loadEventCatalog("data/events.csv");
+  if (result.ok) {
+    eventCatalog = { ...result, source: "csv" };
+    updateEventCatalogStatus(`管理者CSVを読み込みました（${result.rows.length}件）。`, "is-loaded");
+  } else {
+    eventCatalog = FALLBACK_EVENT_CATALOG;
+    console.warn("イベントCSVを読み込めなかったため、標準イベントを使用します。", result.errors);
+    updateEventCatalogStatus("イベントCSVを読み込めないため標準イベントを使用中です。", "is-fallback");
+  }
+  eventCatalogReady = true;
+}
+
 function renderSetup() {
   normalizeSetupCharacters();
   state.activeSetupPlayer = Math.min(state.activeSetupPlayer, state.playerCount - 1);
@@ -777,6 +840,10 @@ function openSetup() {
 
 function startGame(event) {
   event.preventDefault();
+  if (!eventCatalogReady) {
+    toast("イベントCSVを読み込み中です。少し待ってください。");
+    return false;
+  }
   const activeName = elements.nameFields.querySelector("#active-player-name");
   if (activeName) state.setupNames[state.activeSetupPlayer] = activeName.value.trim() || characterProfile(state.setupCharacters[state.activeSetupPlayer]).name;
   const names = Array.from({ length: state.playerCount }, (_, index) => state.setupNames[index].trim() || characterProfile(state.setupCharacters[index]).name);
@@ -815,6 +882,7 @@ function startGame(event) {
   elements.goalBonusModal.classList.add("is-hidden");
   render();
   toast("ゲームをはじめます。最初のサイコロをどうぞ！");
+  return true;
 }
 
 function changeMoney(player, amount) {
@@ -998,7 +1066,9 @@ function openLandingCard(player, space, amount) {
     title: space.label,
     amount,
     icon: space.icon,
-    description: `${player.name}は「${space.label}」に止まりました。${outcome}`,
+    description: space.description
+      ? `${space.description} ${outcome}`
+      : `${player.name}は「${space.label}」に止まりました。${outcome}`,
   });
 }
 
@@ -1272,15 +1342,30 @@ function resolveLanding(player) {
   }
   if (resolveSpecialSpace(player, space)) return;
   if (space.type === "money") {
-    changeMoney(player, player.salary);
-    addFeed(`${player.name}は給料日。${money(player.salary)} を受け取った！`);
-    if (openLandingCard(player, space, player.salary)) return;
+    const salaryAmount = Number.isFinite(space.amount) ? space.amount : player.salary;
+    changeMoney(player, salaryAmount);
+    addFeed(`${player.name}は給料日。${money(salaryAmount)} を受け取った！`);
+    if (space.eventScene && openLifeEvent(player, {
+      scene: space.eventScene,
+      title: space.label,
+      amount: salaryAmount,
+      description: space.description || "",
+      icon: space.icon || "",
+    })) return;
+    if (openLandingCard(player, space, salaryAmount)) return;
   } else if (space.type === "chance") {
-    const chance = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+    const chance = weightedPick(eventCatalog.chanceCards) || CHANCE_CARDS[0];
     changeMoney(player, chance.amount);
-    addFeed(`${player.name}：${chance.title} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`, chance.amount < 0 ? "negative" : "");
-    if (chance.eventScene && openLifeEvent(player, { scene: chance.eventScene, title: chance.title, amount: chance.amount })) return;
-    toast(`${chance.title} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`);
+    const chanceTitle = chance.title || chance.label;
+    addFeed(`${player.name}：${chanceTitle} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`, chance.amount < 0 ? "negative" : "");
+    if (chance.eventScene && openLifeEvent(player, {
+      scene: chance.eventScene,
+      title: chanceTitle,
+      amount: chance.amount,
+      description: chance.description || "",
+      icon: chance.icon || "",
+    })) return;
+    toast(`${chanceTitle} ${chance.amount >= 0 ? "+" : ""}${money(chance.amount)}`);
   } else if (space.type === "family") {
     const familyEvent = resolveFamilyEvent(player, space);
     if (familyEvent && openLifeEvent(player, {
@@ -1291,7 +1376,13 @@ function resolveLanding(player) {
     const amount = space.amount || 0;
     changeMoney(player, amount);
     addFeed(`${player.name}：${space.label} ${amount >= 0 ? "+" : ""}${money(amount)}`, amount < 0 ? "negative" : "");
-    if (space.eventScene && openLifeEvent(player, { scene: space.eventScene, title: space.label, amount })) return;
+    if (space.eventScene && openLifeEvent(player, {
+      scene: space.eventScene,
+      title: space.label,
+      amount,
+      description: space.description || "",
+      icon: space.icon || "",
+    })) return;
     if (openLandingCard(player, space, amount)) return;
   }
   finishTurn();
@@ -1459,6 +1550,7 @@ function runOnlineAction(action, payload = {}) {
 
 window.lifeRouletteGame = {
   startOnlineGame: () => startGame({ preventDefault() {} }),
+  isEventCatalogReady: () => eventCatalogReady,
   getSnapshot: sharedGameSnapshot,
   applySnapshot: applySharedGameSnapshot,
   actionOwner: onlineActionOwner,
@@ -1540,7 +1632,12 @@ document.addEventListener("keydown", (event) => {
   closeMobileGameMenu();
 });
 
-if (window.matchMedia(MOBILE_LAYOUT_QUERY).matches) elements.playerDetails.open = false;
-renderSetup();
-startGame(new Event("submit"));
-elements.setupModal.classList.remove("is-hidden");
+async function initializeGame() {
+  if (window.matchMedia(MOBILE_LAYOUT_QUERY).matches) elements.playerDetails.open = false;
+  renderSetup();
+  await initializeEventCatalog();
+  startGame(new Event("submit"));
+  elements.setupModal.classList.remove("is-hidden");
+}
+
+initializeGame();

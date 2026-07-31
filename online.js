@@ -189,6 +189,10 @@
 
   async function createRoom() {
     if (session.connected) return;
+    if (game.isEventCatalogReady && !game.isEventCatalogReady()) {
+      game.toast("イベントCSVを読み込み中です。少し待ってください。");
+      return;
+    }
     try {
       session.role = "host";
       session.roomCode = createRoomCode();
@@ -208,6 +212,10 @@
   }
 
   async function joinRoom() {
+    if (game.isEventCatalogReady && !game.isEventCatalogReady()) {
+      game.toast("イベントCSVを読み込み中です。少し待ってください。");
+      return;
+    }
     const code = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (code.length !== 8) {
       setJoinStatus("8文字の部屋コードを入力してください。", true);
