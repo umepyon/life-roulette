@@ -7,10 +7,10 @@
   ]);
 
   const DEFAULT_CONFIG = Object.freeze({
-    radius: 6,
+    radius: 9,
     mainEdges: 26,
     branchCount: 2,
-    maximumAttempts: 120,
+    maximumAttempts: 2000,
   });
 
   function hexKey(hex) {
@@ -82,7 +82,26 @@
     return normalizeSeed(`${Date.now()}-${Math.random()}`);
   }
 
-  function findExactPath({ start, goal, edges, radius, blockedKeys, random }) {
+  function canPlaceNextHex({ candidate, current, goal, remainingEdges, usedKeys, goalNeighborKeys }) {
+    const candidateKey = hexKey(candidate);
+    const currentKey = hexKey(current);
+    const isGoal = sameHex(candidate, goal);
+    const allowedNeighborKeys = new Set([currentKey]);
+
+    if (isGoal) {
+      goalNeighborKeys.forEach((key) => allowedNeighborKeys.add(key));
+    } else if (remainingEdges === 2) {
+      allowedNeighborKeys.add(hexKey(goal));
+    }
+
+    if (!isGoal && usedKeys.has(candidateKey)) return false;
+    return hexNeighbors(candidate).every((neighbor) => {
+      const neighborKey = hexKey(neighbor);
+      return !usedKeys.has(neighborKey) || allowedNeighborKeys.has(neighborKey);
+    });
+  }
+
+  function findExactPath({ start, goal, edges, radius, blockedKeys, random, goalNeighborKeys = [] }) {
     const usedKeys = new Set(blockedKeys);
     usedKeys.delete(hexKey(start));
     usedKeys.add(hexKey(start));
@@ -96,12 +115,14 @@
         if (!isWithinRadius(candidate, radius)) return false;
         if (isGoal) return remainingEdges === 1;
         if (usedKeys.has(candidateKey)) return false;
-        return hexDistance(candidate, goal) <= remainingEdges - 1;
+        if (hexDistance(candidate, goal) > remainingEdges - 1) return false;
+        return canPlaceNextHex({ candidate, current, goal, remainingEdges, usedKeys, goalNeighborKeys });
       });
 
       for (const candidate of candidates) {
         const candidateKey = hexKey(candidate);
         const isGoal = sameHex(candidate, goal);
+        if (isGoal && !canPlaceNextHex({ candidate, current, goal, remainingEdges, usedKeys, goalNeighborKeys })) continue;
         if (!isGoal) usedKeys.add(candidateKey);
         path.push(copyHex(candidate));
         if (visit(candidate, remainingEdges - 1)) return true;
@@ -129,7 +150,10 @@
     const maximumEdges = Math.max(directDistance + 2, mainSegmentEdges + 3);
 
     for (let edges = directDistance + 1; edges <= maximumEdges; edges += 1) {
-      const path = findExactPath({ start, goal, edges, radius, blockedKeys: occupiedKeys, random });
+      const goalNeighborKeys = [mainPath[endIndex - 1], mainPath[endIndex + 1]]
+        .filter(Boolean)
+        .map(hexKey);
+      const path = findExactPath({ start, goal, edges, radius, blockedKeys: occupiedKeys, random, goalNeighborKeys });
       if (path && path.length > 2) return path;
     }
     return null;
@@ -236,12 +260,29 @@
     });
     if (!nodesById.has(course.startId) || !nodesById.has(course.goalId)) errors.push("START または GOAL が存在しません");
     if (course.branches.length !== expectedBranchCount) errors.push(`分岐数が ${expectedBranchCount} 本ではありません`);
+    const edgeKeys = new Set();
+    const edgeCountById = new Map(course.nodes.map((node) => [node.id, 0]));
     course.edges.forEach((edge) => {
       const from = nodesById.get(edge.from);
       const to = nodesById.get(edge.to);
+      edgeKeys.add([edge.from, edge.to].sort().join("|"));
+      edgeCountById.set(edge.from, (edgeCountById.get(edge.from) || 0) + 1);
+      edgeCountById.set(edge.to, (edgeCountById.get(edge.to) || 0) + 1);
       if (!from || !to) errors.push(`接続先が存在しない辺: ${edge.from} → ${edge.to}`);
       else if (hexDistance(from, to) !== 1) errors.push(`隣接していない辺: ${edge.from} → ${edge.to}`);
     });
+    edgeCountById.forEach((count, id) => {
+      if (count > 3) errors.push(`接続数が3を超えています: ${id}`);
+    });
+    for (let firstIndex = 0; firstIndex < course.nodes.length; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < course.nodes.length; secondIndex += 1) {
+        const first = course.nodes[firstIndex];
+        const second = course.nodes[secondIndex];
+        if (hexDistance(first, second) !== 1) continue;
+        const key = [first.id, second.id].sort().join("|");
+        if (!edgeKeys.has(key)) errors.push(`接続していないヘックスが隣接しています: ${first.id} / ${second.id}`);
+      }
+    }
     const mainNodeIds = new Set(course.mainRoute);
     if (course.mainRoute[0] !== course.startId || course.mainRoute[course.mainRoute.length - 1] !== course.goalId) errors.push("メインルートの始点または終点が不正です");
     course.branches.forEach((branch, index) => {

@@ -46,6 +46,21 @@ for (let seed = 1; seed <= 200; seed += 1) {
     const to = course.nodes.find((node) => node.id === edge.to);
     assert.equal(hexDistance(from, to), 1, `seed ${seed}: 辺は隣接ヘックスをつなぐ`);
   });
+  const edgeKeys = new Set(course.edges.map((edge) => [edge.from, edge.to].sort().join("|")));
+  const edgeCounts = new Map(course.nodes.map((node) => [node.id, 0]));
+  course.edges.forEach((edge) => {
+    edgeCounts.set(edge.from, edgeCounts.get(edge.from) + 1);
+    edgeCounts.set(edge.to, edgeCounts.get(edge.to) + 1);
+  });
+  edgeCounts.forEach((count) => assert.ok(count <= 3, `seed ${seed}: 分岐以外で余分に接続しない`));
+  for (let firstIndex = 0; firstIndex < course.nodes.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < course.nodes.length; secondIndex += 1) {
+      const firstNode = course.nodes[firstIndex];
+      const secondNode = course.nodes[secondIndex];
+      if (hexDistance(firstNode, secondNode) !== 1) continue;
+      assert.ok(edgeKeys.has([firstNode.id, secondNode.id].sort().join("|")), `seed ${seed}: 接続していないヘックスは離れて配置する`);
+    }
+  }
 }
 
 console.log("hex-course: 200 seeds validated");

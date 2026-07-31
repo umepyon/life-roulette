@@ -488,7 +488,7 @@ function hexBoardLayout(hexCourse) {
   return { width, height, pointById };
 }
 
-function hexPolygonPoints(point, radius = .62) {
+function hexPolygonPoints(point, radius = 1) {
   return Array.from({ length: 6 }, (_, index) => {
     const angle = (Math.PI / 3) * index;
     return `${(point.x + Math.cos(angle) * radius).toFixed(2)},${(point.y + Math.sin(angle) * radius).toFixed(2)}`;
@@ -500,12 +500,6 @@ function renderHexBoard(course) {
   const positions = playerPositions();
   const activeSpaceId = currentPlayer()?.spaceId;
   const { width, height, pointById } = hexBoardLayout(course.hexCourse);
-  const routes = course.hexCourse.edges.map((edge) => {
-    const from = pointById[edge.from];
-    const to = pointById[edge.to];
-    const coordinates = `x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}"`;
-    return `<line class="hex-route-bed hex-route-bed--${edge.role}" ${coordinates} /><line class="hex-route hex-route--${edge.role}" ${coordinates} />`;
-  }).join("");
   const spaces = course.spaces.map((space) => {
     const point = pointById[space.id];
     return `<g class="hex-space hex-space--${space.type} ${space.id === activeSpaceId ? "is-current-space" : ""}" role="img" aria-label="${escapeHtml(space.label)}：${escapeHtml(space.sub)}">
@@ -521,7 +515,6 @@ function renderHexBoard(course) {
   elements.board.innerHTML = `<svg class="hex-board-svg" viewBox="0 0 ${width.toFixed(2)} ${height.toFixed(2)}" role="img" aria-label="シード ${course.seed} のヘックス人生ルーレット盤">
       <title>シード ${course.seed} のヘックス人生ルーレット盤</title>
       <rect class="hex-board-background" x="0" y="0" width="${width.toFixed(2)}" height="${height.toFixed(2)}" rx="1" />
-      <g class="hex-route-layer">${routes}</g>
       <g class="hex-space-layer">${spaces}</g>
     </svg><div class="hex-token-layer">${tokens}</div>`;
 }
