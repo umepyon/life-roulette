@@ -12,15 +12,16 @@
       label: "小コース",
       mainEdges: 26,
       radius: 9,
-      branchCount: 2,
+      branchCount: 3,
       maximumAttempts: 2000,
+      template: "small",
     }),
     medium: Object.freeze({
       size: "medium",
       label: "中コース",
       mainEdges: 59,
       radius: 14,
-      branchCount: 2,
+      branchCount: 3,
       template: "medium",
     }),
     large: Object.freeze({
@@ -28,7 +29,7 @@
       label: "大コース",
       mainEdges: 99,
       radius: 22,
-      branchCount: 2,
+      branchCount: 3,
       template: "large",
     }),
   });
@@ -39,18 +40,29 @@
   });
 
   const COURSE_TEMPLATES = Object.freeze({
+    small: Object.freeze({
+      start: Object.freeze({ q: -9, r: 0 }),
+      mainDirections: "55054500050111050100001011",
+      branches: Object.freeze([
+        Object.freeze({ fromIndex: 4, toIndex: 9, directions: "00054" }),
+        Object.freeze({ fromIndex: 11, toIndex: 16, directions: "50111" }),
+        Object.freeze({ fromIndex: 18, toIndex: 23, directions: "2100005" }),
+      ]),
+    }),
     medium: Object.freeze({
       start: Object.freeze({ q: -7, r: 0 }),
       mainDirections: "43223343211010121110501050545445501100500505445054500111101",
       branches: Object.freeze([
         Object.freeze({ fromIndex: 15, toIndex: 28, directions: "05001010" }),
         Object.freeze({ fromIndex: 33, toIndex: 47, directions: "45555550010101" }),
+        Object.freeze({ fromIndex: 44, toIndex: 57, directions: "0010555" }),
       ]),
     }),
     large: Object.freeze({
       start: Object.freeze({ q: -12, r: 0 }),
       mainDirections: "444450545555055550101123232212211232122101001005050100122332321110121010110105010112333333434323334",
       branches: Object.freeze([
+        Object.freeze({ fromIndex: 5, toIndex: 8, directions: "450" }),
         Object.freeze({ fromIndex: 25, toIndex: 48, directions: "111105010112212233221" }),
         Object.freeze({ fromIndex: 55, toIndex: 78, directions: "005501222211111112321" }),
       ]),
@@ -224,8 +236,9 @@
 
   function branchAnchorIndexes(mainPathLength) {
     return [
-      [Math.round((mainPathLength - 1) * 0.25), Math.round((mainPathLength - 1) * 0.48)],
-      [Math.round((mainPathLength - 1) * 0.56), Math.round((mainPathLength - 1) * 0.79)],
+      [Math.round((mainPathLength - 1) * 0.15), Math.round((mainPathLength - 1) * 0.35)],
+      [Math.round((mainPathLength - 1) * 0.42), Math.round((mainPathLength - 1) * 0.62)],
+      [Math.round((mainPathLength - 1) * 0.68), Math.round((mainPathLength - 1) * 0.88)],
     ];
   }
 

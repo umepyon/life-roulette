@@ -34,10 +34,13 @@ function assertValidCourse(course, { size, seed }) {
   assert.equal(validation.valid, true, `seed ${seed}: ${validation.errors.join(" / ")}`);
   assert.equal(course.size, size, `${size}: コース規模が一致する`);
   assert.equal(course.sizeLabel, COURSE_SIZES[size].label, `${size}: コース名が一致する`);
-  assert.equal(course.branches.length, 2, `${size}: 分岐は2本生成される`);
+  assert.equal(course.branches.length, 3, `${size}: 分岐は3本生成される`);
   assert.equal(course.mainRoute.length, COURSE_SIZES[size].mainRouteCells, `${size}: メインルートのマス数が一致する`);
   const generatedGraph = createRouteGraph(course);
-  [[false, false], [false, true], [true, false], [true, true]].forEach((branchChoices) => reachesGoal(course, generatedGraph, branchChoices));
+  const branchChoices = Array.from({ length: 2 ** course.branches.length }, (_, value) => (
+    course.branches.map((_, branchIndex) => Boolean(value & (1 << branchIndex)))
+  ));
+  branchChoices.forEach((choices) => reachesGoal(course, generatedGraph, choices));
   course.edges.forEach((edge) => {
     const from = course.nodes.find((node) => node.id === edge.from);
     const to = course.nodes.find((node) => node.id === edge.to);

@@ -38,10 +38,10 @@ const LEGACY_SPACES = [
   { id: "first-payday", label: "はじめての給料", sub: "+収入", icon: "💴", type: "money", grid: [10, 1], next: "dream-seed" },
   { id: "dream-seed", label: "夢のタネ", sub: "発見", icon: "🌱", type: "event", amount: 9000, grid: [9, 1], next: "school-fork" },
   {
-    id: "school-fork", label: "最初の分岐", sub: "進路を選ぶ", icon: "⇄", type: "branch", grid: [8, 2],
+    id: "school-fork", label: "就職・進学", sub: "最初の進路を選ぶ", icon: "🎓", type: "branch", grid: [8, 2],
     routeOptions: [
-      { title: "学びのルート", detail: "時間をかけて、好きなことを深く学ぶ", next: "college-1", effect: "学びのルートを選んだ" },
-      { title: "仕事のルート", detail: "すぐに社会へ。経験を積みながら成長する", next: "work-1", effect: "仕事のルートを選んだ" },
+      { title: "大学へ進む", detail: "学びを深めて、将来の選択肢を広げる", next: "college-1", effect: "大学へ進む道を選んだ" },
+      { title: "すぐに働く", detail: "早く仕事を始めて、給料をもらいながら進む", next: "work-1", effect: "すぐに働く道を選んだ" },
     ],
   },
   { id: "college-1", label: "キャンパス", sub: "学び", icon: "📚", type: "event", amount: -8000, grid: [7, 2], next: "college-2" },
@@ -60,10 +60,10 @@ const LEGACY_SPACES = [
   { id: "city-3", label: "キャリアの転機", sub: "チャンス", icon: "🚀", type: "chance", grid: [3, 9], next: "city-4" },
   { id: "city-4", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [3, 10], next: "home-fork" },
   {
-    id: "home-fork", label: "暮らしの分岐", sub: "住まいを選ぶ", icon: "⌂", type: "branch", grid: [4, 11],
+    id: "home-fork", label: "結婚・家族", sub: "人生イベントの道を選ぶ", icon: "💍", type: "branch", grid: [4, 11],
     routeOptions: [
-      { title: "ゆとりの街ルート", detail: "仲間が集まる便利な場所で、毎日を楽しむ", next: "urban-1", effect: "ゆとりの街ルートを選んだ" },
-      { title: "じっくり住まいルート", detail: "手をかけた住まいで、穏やかな暮らしを育てる", next: "home-1", effect: "じっくり住まいルートを選んだ" },
+      { title: "仕事を優先", detail: "家族イベントを選ばず、仕事や夢に集中する", next: "urban-1", effect: "仕事を優先する道を選んだ" },
+      { title: "家族・結婚コース", detail: "結婚や出産を経験して、家族と人生を歩む", next: "home-1", effect: "家族・結婚コースを選んだ" },
     ],
   },
   { id: "urban-1", label: "シェアライフ", sub: "仲間", icon: "🪴", type: "event", amount: 12000, grid: [3, 12], next: "urban-2" },
@@ -71,7 +71,7 @@ const LEGACY_SPACES = [
   { id: "urban-3", label: "屋上カフェ", sub: "出会い", icon: "☕", type: "chance", grid: [4, 14], next: "urban-4" },
   { id: "urban-4", label: "憧れのマイカー", sub: "大きな買い物", icon: "🏎", type: "event", amount: -30000, eventScene: "car", grid: [5, 14], next: "urban-5" },
   { id: "urban-5", label: "引っ越し祝い", sub: "いいこと", icon: "🎀", type: "event", amount: 17000, grid: [6, 13], next: "urban-6" },
-  { id: "urban-6", label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -9000, grid: [7, 12], next: "life-join" },
+  { id: "urban-6", label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -9000, grid: [7, 12], next: "dream-fork" },
   { id: "home-1", label: "マイホーム購入", sub: "夢の住まい", icon: "🏠", type: "event", amount: -16000, eventScene: "home", grid: [5, 10], next: "home-2" },
   { id: "home-2", label: "家庭菜園", sub: "いいこと", icon: "🥕", type: "event", amount: 12000, grid: [6, 10], next: "home-3" },
   { id: "home-3", label: "給料日", sub: "+収入", icon: "💴", type: "money", grid: [7, 10], next: "life-join" },
@@ -80,10 +80,10 @@ const LEGACY_SPACES = [
   { id: "family-2", label: "第二子誕生", sub: "家族が増える", icon: "🧸", type: "family", familyAction: "child", amount: 8000, grid: [9, 10], next: "family-3" },
   { id: "family-3", label: "先頭と入れ替え", sub: "人生の大逆転", icon: "⇆", type: "swap-leader", grid: [10, 9], next: "dream-fork" },
   {
-    id: "dream-fork", label: "未来の分岐", sub: "夢を選ぶ", icon: "✦", type: "branch", grid: [10, 8],
+    id: "dream-fork", label: "仕事・プロ", sub: "夢の仕事を選ぶ", icon: "🌟", type: "branch", grid: [10, 8],
     routeOptions: [
-      { title: "挑戦のルート", detail: "新しい仕事や夢へ、思いきって進む", next: "challenge-1", effect: "挑戦のルートを選んだ" },
-      { title: "しあわせのルート", detail: "好きな人たちとの時間を、ていねいに楽しむ", next: "relax-1", effect: "しあわせのルートを選んだ" },
+      { title: "プロを目指す", detail: "スポーツ選手や芸能人など、特別な夢に挑戦する", next: "challenge-1", effect: "プロを目指す道を選んだ" },
+      { title: "一般の仕事", detail: "安定した仕事で、堅実な人生を進む", next: "relax-1", effect: "一般の仕事を選んだ" },
     ],
   },
   { id: "challenge-1", label: "大きな挑戦", sub: "勝負", icon: "⚡", type: "chance", grid: [9, 7], next: "challenge-2" },
@@ -106,7 +106,7 @@ const LEGACY_ROUTE_LINES = [
   ["school-fork", "college-1", "college-2", "college-3", "college-4", "college-5", "city-join"],
   ["school-fork", "work-1", "work-2", "work-3", "work-4", "work-5", "city-join"],
   ["city-join", "city-1", "city-2", "city-3", "city-4", "home-fork"],
-  ["home-fork", "urban-1", "urban-2", "urban-3", "urban-4", "urban-5", "urban-6", "life-join"],
+  ["home-fork", "urban-1", "urban-2", "urban-3", "urban-4", "urban-5", "urban-6", "dream-fork"],
   ["home-fork", "home-1", "home-2", "home-3", "life-join"],
   ["life-join", "family-1", "family-2", "family-3", "dream-fork"],
   ["dream-fork", "challenge-1", "challenge-2", "challenge-3", "challenge-4", "last-join"],
@@ -115,9 +115,9 @@ const LEGACY_ROUTE_LINES = [
 ];
 
 const LEGACY_BRANCH_SIGNPOSTS = [
-  { grid: [7, 1], label: "学び ↑ / 仕事 →" },
-  { grid: [5, 12], label: "街 ↑ / 住まい ↓" },
-  { grid: [10, 7], label: "挑戦 ↑ / しあわせ ↓" },
+  { grid: [7, 1], label: "大学 ↑ / 仕事 →" },
+  { grid: [5, 12], label: "仕事 ↑ / 家族 ↓" },
+  { grid: [10, 7], label: "プロ ↑ / 一般 ↓" },
 ];
 
 const LEGACY_COURSE = {
@@ -179,6 +179,46 @@ const FALLBACK_EVENT_CATALOG = Object.freeze({
 let eventCatalog = FALLBACK_EVENT_CATALOG;
 let eventCatalogReady = false;
 
+const BRANCH_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    label: "就職・進学",
+    sub: "最初の進路を選ぶ",
+    icon: "🎓",
+    main: Object.freeze({ title: "大学へ進む", detail: "学びを深めて、将来の選択肢を広げる", effect: "大学へ進む道を選んだ" }),
+    branch: Object.freeze({ title: "すぐに働く", detail: "早く仕事を始めて、給料をもらいながら進む", effect: "すぐに働く道を選んだ" }),
+  }),
+  Object.freeze({
+    label: "結婚・家族",
+    sub: "人生イベントの道を選ぶ",
+    icon: "💍",
+    main: Object.freeze({ title: "家族・結婚コース", detail: "結婚や出産を経験して、家族と人生を歩む", effect: "家族・結婚コースを選んだ" }),
+    branch: Object.freeze({ title: "仕事を優先", detail: "家族イベントを選ばず、仕事や夢に集中する", effect: "仕事を優先する道を選んだ" }),
+  }),
+  Object.freeze({
+    label: "仕事・プロ",
+    sub: "夢の仕事を選ぶ",
+    icon: "🌟",
+    main: Object.freeze({ title: "一般の仕事", detail: "安定した仕事で、堅実な人生を進む", effect: "一般の仕事を選んだ" }),
+    branch: Object.freeze({ title: "プロを目指す", detail: "スポーツ選手や芸能人など、特別な夢に挑戦する", effect: "プロを目指す道を選んだ" }),
+  }),
+]);
+
+function branchRouteEvent(branchIndex, routeIndex) {
+  if (routeIndex === 1 && branchIndex === 0) {
+    return { label: "就職活動", sub: "仕事の道", description: "すぐに働く道を選び、仕事探しを始めました。", amount: 8000, icon: "💼", type: "event", eventScene: "office" };
+  }
+  if (routeIndex === 2 && branchIndex === 0) {
+    return { label: "初任給", sub: "はじめての給料", description: "働き始めて、はじめての給料を受け取りました。", amount: 30000, icon: "💴", type: "money" };
+  }
+  if (routeIndex === 1 && branchIndex === 2) {
+    return { label: "プロのオーディション", sub: "特別な挑戦", description: "プロへの道を目指して、最初の審査に挑みました。", amount: -8000, icon: "🎤", type: "event", eventScene: "success" };
+  }
+  if (routeIndex === 2 && branchIndex === 2) {
+    return { label: "才能を磨く", sub: "プロへの努力", description: "夢をかなえるために、厳しい練習を続けました。", amount: -10000, icon: "🏅", type: "event", eventScene: "success" };
+  }
+  return null;
+}
+
 function weightedShuffle(items, random) {
   const remaining = [...items];
   const ordered = [];
@@ -216,24 +256,27 @@ function buildHexGameCourse(courseSize = state.courseSize) {
   const random = hexApi.createRandom(`${hexCourse.seed}:events`);
   const mainIndexById = new Map(hexCourse.mainRoute.map((id, index) => [id, index]));
   const branchIndexById = new Map(hexCourse.branches.map((branch, index) => [branch.from, index]));
+  const branchRouteIndexById = new Map();
+  hexCourse.branches.forEach((branch, branchIndex) => {
+    branch.route.slice(1, -1).forEach((id, routeIndex) => {
+      branchRouteIndexById.set(id, { branchIndex, routeIndex: routeIndex + 1 });
+    });
+  });
   const templates = weightedShuffle(eventCatalog.events, random);
   const spaceById = {};
   const mainLength = hexCourse.mainRoute.length;
-  const milestones = hexCourse.size === "small"
-    ? {
-      moveBackIndex: 5,
-      partnerIndex: 13,
-      skipTurnIndex: 14,
-      swapLeaderIndex: mainLength - 6,
-      childIndex: mainLength - 4,
-    }
-    : {
-      moveBackIndex: Math.round((mainLength - 1) * .18),
-      partnerIndex: Math.round((mainLength - 1) * .34),
-      skipTurnIndex: Math.round((mainLength - 1) * .39),
-      swapLeaderIndex: Math.round((mainLength - 1) * .70),
-      childIndex: Math.round((mainLength - 1) * .85),
-    };
+  const familyBranchStartIndex = mainIndexById.get(hexCourse.branches[1]?.from) ?? Math.round((mainLength - 1) * .42);
+  const familyBranchMergeIndex = mainIndexById.get(hexCourse.branches[1]?.to) ?? Math.round((mainLength - 1) * .62);
+  const careerBranchStartIndex = mainIndexById.get(hexCourse.branches[2]?.from) ?? Math.round((mainLength - 1) * .70);
+  const familyPartnerIndex = Math.min(familyBranchStartIndex + 2, familyBranchMergeIndex - 4);
+  const familyChildIndex = Math.max(familyPartnerIndex + 2, familyBranchMergeIndex - 2);
+  const milestones = {
+    moveBackIndex: hexCourse.size === "small" ? 5 : Math.round((mainLength - 1) * .18),
+    partnerIndex: familyPartnerIndex,
+    skipTurnIndex: hexCourse.size === "small" ? 10 : Math.round((mainLength - 1) * .39),
+    swapLeaderIndex: Math.max(familyChildIndex + 2, careerBranchStartIndex - 2),
+    childIndex: familyChildIndex,
+  };
   const { moveBackIndex, partnerIndex, skipTurnIndex, swapLeaderIndex, childIndex } = milestones;
   const returnStartIndex = mainLength - 2;
   let templateIndex = 0;
@@ -249,17 +292,22 @@ function buildHexGameCourse(courseSize = state.courseSize) {
     } else if (mainIndex === returnStartIndex) {
       space = { label: "スタートに戻る", sub: "所持金が半分に", icon: "⏪", type: "return-start" };
     } else if (branchIndex !== undefined) {
+      const definition = BRANCH_DEFINITIONS[branchIndex] || BRANCH_DEFINITIONS[0];
       const routeOptions = graph.branchOptionsById[node.id];
       space = {
-        label: branchIndex === 0 ? "最初の分岐" : "未来の分岐",
-        sub: "道を選ぶ",
-        icon: "⇄",
+        label: definition.label,
+        sub: definition.sub,
+        icon: definition.icon,
         type: "branch",
         routeOptions: [
-          { title: "王道ルート", detail: "まっすぐ進んで、堅実に前へ", next: routeOptions[0], effect: "王道ルートを選んだ" },
-          { title: "寄り道ルート", detail: "景色を変えて、別の出来事へ", next: routeOptions[1], effect: "寄り道ルートを選んだ" },
+          { ...definition.main, next: routeOptions[0] },
+          { ...definition.branch, next: routeOptions[1] },
         ],
       };
+    } else if (branchRouteIndexById.has(node.id)) {
+      const routeMeta = branchRouteIndexById.get(node.id);
+      space = branchRouteEvent(routeMeta.branchIndex, routeMeta.routeIndex) || { ...templates[templateIndex % templates.length] };
+      templateIndex += 1;
     } else if (mainIndex === moveBackIndex) {
       space = { label: "3マスもどる", sub: "思わぬ遠回り", icon: "↩", type: "move-back", moveBack: 3 };
     } else if (mainIndex === partnerIndex) {
