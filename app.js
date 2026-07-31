@@ -688,6 +688,7 @@ function startGame(event) {
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
   if (state.course.seed) addFeed(`HEXコース #${state.course.seed} を生成。分岐の先には別の人生が待っています。`, "choice-dot");
+  elements.playerDetails.open = !window.matchMedia("(max-width: 760px)").matches;
   elements.setupModal.classList.add("is-hidden");
   elements.resultModal.classList.add("is-hidden");
   render();
@@ -1007,7 +1008,7 @@ function continueGoalBonus() {
 
 function resolveLanding(player) {
   const space = currentSpace(player);
-  if (space.id === GOAL_ID) {
+  if (space.type === "goal") {
     player.finished = true;
     player.finishOrder = state.players.filter((entry) => entry.finished).length;
     const finishBonus = player.finishOrder === 1 ? 0 : 45000;

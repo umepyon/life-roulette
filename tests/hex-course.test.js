@@ -19,26 +19,28 @@ assert.equal(first.branches.length, 2, "分岐は2本生成される");
 assert.equal(first.mainRoute.length, 27, "メインルートは27マスである");
 assert.notEqual(courseFingerprint(first), courseFingerprint(generateHexCourse(sampleSeed + 1)), "異なるシードではコースが変わる");
 
-function reachesGoal(course, graph, takeBranch) {
+function reachesGoal(course, graph, branchChoices) {
   let current = course.startId;
   const visited = new Set();
   while (current !== course.goalId) {
     assert.equal(visited.has(current), false, "循環しない");
     visited.add(current);
     const options = graph.branchOptionsById[current];
-    current = options ? options[takeBranch ? 1 : 0] : graph.nextById[current];
+    const branchIndex = course.branches.findIndex((branch) => branch.from === current);
+    current = options ? options[branchChoices[branchIndex] ? 1 : 0] : graph.nextById[current];
     assert.ok(current, "次のマスが存在する");
   }
 }
 
 const graph = createRouteGraph(first);
-reachesGoal(first, graph, false);
-reachesGoal(first, graph, true);
+[[false, false], [false, true], [true, false], [true, true]].forEach((branchChoices) => reachesGoal(first, graph, branchChoices));
 
 for (let seed = 1; seed <= 200; seed += 1) {
   const course = generateHexCourse(seed);
   const validation = validateHexCourse(course);
   assert.equal(validation.valid, true, `seed ${seed}: ${validation.errors.join(" / ")}`);
+  const generatedGraph = createRouteGraph(course);
+  [[false, false], [false, true], [true, false], [true, true]].forEach((branchChoices) => reachesGoal(course, generatedGraph, branchChoices));
   course.edges.forEach((edge) => {
     const from = course.nodes.find((node) => node.id === edge.from);
     const to = course.nodes.find((node) => node.id === edge.to);
