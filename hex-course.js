@@ -187,6 +187,24 @@
     };
   }
 
+  function createRouteGraph(course) {
+    const nextById = {};
+    const branchOptionsById = {};
+    course.mainRoute.forEach((id, index) => {
+      if (index < course.mainRoute.length - 1) nextById[id] = course.mainRoute[index + 1];
+    });
+    course.branches.forEach((branch) => {
+      const mainNext = nextById[branch.from];
+      const branchNext = branch.route[1];
+      if (!mainNext || !branchNext) return;
+      branchOptionsById[branch.from] = [mainNext, branchNext];
+      for (let index = 1; index < branch.route.length - 1; index += 1) {
+        nextById[branch.route[index]] = branch.route[index + 1];
+      }
+    });
+    return { nextById, branchOptionsById };
+  }
+
   function findPathInGraph(course) {
     const neighbors = new Map(course.nodes.map((node) => [node.id, []]));
     course.edges.forEach((edge) => {
@@ -286,6 +304,7 @@
     createCourseSeed,
     createRandom,
     courseFingerprint,
+    createRouteGraph,
     generateHexCourse,
     hexDistance,
     hexKey,
@@ -295,5 +314,6 @@
   });
 
   global.LifeRouletteHex = api;
+  if (typeof window !== "undefined") window.LifeRouletteHex = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 }(globalThis));

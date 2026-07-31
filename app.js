@@ -32,7 +32,7 @@ const GOAL_ID = "goal";
 const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
 const GOAL_BONUS_AMOUNTS = { 1: 1000000, 2: 2000000, 3: 3000000, 4: 5000000, 5: 7000000, 6: 10000000 };
 
-const SPACES = [
+const LEGACY_SPACES = [
   { id: "start", label: "START", sub: "出発", icon: "🏁", type: "start", grid: [11, 1], next: "first-payday" },
   { id: "first-payday", label: "はじめての給料", sub: "+収入", icon: "💴", type: "money", grid: [10, 1], next: "dream-seed" },
   { id: "dream-seed", label: "夢のタネ", sub: "発見", icon: "🌱", type: "event", amount: 9000, grid: [9, 1], next: "school-fork" },
@@ -99,8 +99,8 @@ const SPACES = [
   { id: GOAL_ID, label: "GOAL", sub: "おつかれさま", icon: "🏆", type: "goal", grid: [12, 1] },
 ];
 
-const SPACE_BY_ID = Object.fromEntries(SPACES.map((space) => [space.id, space]));
-const ROUTE_LINES = [
+const LEGACY_SPACE_BY_ID = Object.fromEntries(LEGACY_SPACES.map((space) => [space.id, space]));
+const LEGACY_ROUTE_LINES = [
   ["start", "first-payday", "dream-seed", "school-fork"],
   ["school-fork", "college-1", "college-2", "college-3", "college-4", "college-5", "city-join"],
   ["school-fork", "work-1", "work-2", "work-3", "work-4", "work-5", "city-join"],
@@ -113,11 +113,21 @@ const ROUTE_LINES = [
   ["last-join", "final-1", "final-2", GOAL_ID],
 ];
 
-const BRANCH_SIGNPOSTS = [
+const LEGACY_BRANCH_SIGNPOSTS = [
   { grid: [7, 1], label: "学び ↑ / 仕事 →" },
   { grid: [5, 12], label: "街 ↑ / 住まい ↓" },
   { grid: [10, 7], label: "挑戦 ↑ / しあわせ ↓" },
 ];
+
+const LEGACY_COURSE = {
+  kind: "legacy",
+  spaces: LEGACY_SPACES,
+  spaceById: LEGACY_SPACE_BY_ID,
+  routeLines: LEGACY_ROUTE_LINES,
+  signposts: LEGACY_BRANCH_SIGNPOSTS,
+  startId: "start",
+  seed: null,
+};
 
 const CHANCE_CARDS = [
   { title: "宝くじに当選！", amount: 40000, eventScene: "lottery" },
@@ -143,6 +153,83 @@ const EVENT_SCENES = {
   "goal-poor-man": { kicker: "TOUGH ENDING", label: "古いアパートで節約暮らしをする男性のイラスト" },
   "goal-poor-woman": { kicker: "TOUGH ENDING", label: "古いアパートで節約暮らしをする女性のイラスト" },
 };
+
+const GENERATED_EVENT_TEMPLATES = [
+  { label: "給料日", sub: "+収入", icon: "💴", type: "money" },
+  { label: "趣味の時間", sub: "いいこと", icon: "🎸", type: "event", amount: 7000 },
+  { label: "副業が好調", sub: "副収入", icon: "💻", type: "event", amount: 16000, eventScene: "freelance" },
+  { label: "思いがけない修理", sub: "出費", icon: "🔧", type: "event", amount: -14000, eventScene: "repair" },
+  { label: "新しい出会い", sub: "いいこと", icon: "🌼", type: "event", amount: 9000 },
+  { label: "憧れのマイカー", sub: "大きな買い物", icon: "🏎", type: "event", amount: -30000, eventScene: "car" },
+  { label: "宝くじチャンス", sub: "運だめし", icon: "🎟", type: "chance" },
+  { label: "マイホーム計画", sub: "夢の住まい", icon: "🏠", type: "event", amount: -16000, eventScene: "home" },
+  { label: "友人の助け", sub: "いいこと", icon: "🤝", type: "event", amount: 12000, eventScene: "friends" },
+  { label: "小さな贅沢", sub: "出費", icon: "🍰", type: "event", amount: -8000, eventScene: "expense" },
+  { label: "大きな挑戦", sub: "チャンス", icon: "⚡", type: "chance" },
+  { label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -10000 },
+];
+
+function buildHexGameCourse() {
+  const hexApi = globalThis.LifeRouletteHex || globalThis.window?.LifeRouletteHex;
+  if (!hexApi) return LEGACY_COURSE;
+  const hexCourse = hexApi.generateHexCourse();
+  const graph = hexApi.createRouteGraph(hexCourse);
+  const random = hexApi.createRandom(`${hexCourse.seed}:events`);
+  const mainIndexById = new Map(hexCourse.mainRoute.map((id, index) => [id, index]));
+  const branchIndexById = new Map(hexCourse.branches.map((branch, index) => [branch.from, index]));
+  const templates = random.shuffle(GENERATED_EVENT_TEMPLATES);
+  const spaceById = {};
+  const mainLength = hexCourse.mainRoute.length;
+  const partnerIndex = 13;
+  const childIndex = mainLength - 4;
+  let templateIndex = 0;
+
+  hexCourse.nodes.forEach((node) => {
+    const mainIndex = mainIndexById.get(node.id);
+    const branchIndex = branchIndexById.get(node.id);
+    let space;
+    if (node.id === hexCourse.startId) {
+      space = { label: "START", sub: "出発", icon: "🏁", type: "start" };
+    } else if (node.id === hexCourse.goalId) {
+      space = { label: "GOAL", sub: "おつかれさま", icon: "🏆", type: "goal" };
+    } else if (branchIndex !== undefined) {
+      const routeOptions = graph.branchOptionsById[node.id];
+      space = {
+        label: branchIndex === 0 ? "最初の分岐" : "未来の分岐",
+        sub: "道を選ぶ",
+        icon: "⇄",
+        type: "branch",
+        routeOptions: [
+          { title: "王道ルート", detail: "まっすぐ進んで、堅実に前へ", next: routeOptions[0], effect: "王道ルートを選んだ" },
+          { title: "寄り道ルート", detail: "景色を変えて、別の出来事へ", next: routeOptions[1], effect: "寄り道ルートを選んだ" },
+        ],
+      };
+    } else if (mainIndex === partnerIndex) {
+      space = { label: "結婚！", sub: "人生イベント", icon: "💍", type: "family", familyAction: "partner", amount: 18000 };
+    } else if (mainIndex === childIndex) {
+      space = { label: "第一子誕生", sub: "家族が増える", icon: "🍼", type: "family", familyAction: "child", amount: 10000 };
+    } else {
+      space = { ...templates[templateIndex % templates.length] };
+      templateIndex += 1;
+    }
+    spaceById[node.id] = {
+      id: node.id,
+      q: node.q,
+      r: node.r,
+      next: graph.nextById[node.id],
+      ...space,
+    };
+  });
+
+  return {
+    kind: "hex",
+    seed: hexCourse.seed,
+    hexCourse,
+    spaces: hexCourse.nodes.map((node) => spaceById[node.id]),
+    spaceById,
+    startId: hexCourse.startId,
+  };
+}
 
 const elements = {
   board: document.querySelector("#board"),
@@ -190,6 +277,7 @@ const elements = {
 };
 
 const state = {
+  course: null,
   players: [],
   currentIndex: 0,
   dice: 1,
@@ -220,6 +308,14 @@ function characterProfile(characterId) {
   return CHARACTER_BY_ID[characterId] || CHARACTER_PROFILES[0];
 }
 
+function activeCourse() {
+  return state.course || LEGACY_COURSE;
+}
+
+function activeSpaceById(id) {
+  return activeCourse().spaceById[id];
+}
+
 function portraitMarkup(profile, className = "", label = `${profile.name}のバストアップ画像`) {
   const column = profile.sprite % 4;
   const row = Math.floor(profile.sprite / 4);
@@ -233,7 +329,7 @@ function currentPlayer() {
 }
 
 function currentSpace(player) {
-  return SPACE_BY_ID[player.spaceId];
+  return activeSpaceById(player.spaceId);
 }
 
 function nextSpaceId(player) {
@@ -267,23 +363,28 @@ function carMarkup(player, isCurrent = false) {
   </span>`;
 }
 
-function gridPoint(spaceId) {
-  const [row, column] = SPACE_BY_ID[spaceId].grid;
+function legacyGridPoint(spaceId) {
+  const [row, column] = LEGACY_SPACE_BY_ID[spaceId].grid;
   return `${column - 0.5},${row - 0.5}`;
 }
 
-function routeSvgMarkup() {
-  const paths = ROUTE_LINES.map((line, index) => `<path class="route-line ${index === 0 || index === ROUTE_LINES.length - 1 ? "route-line--main" : ""}" d="M ${line.map(gridPoint).join(" L ")}" />`).join("");
+function legacyRouteSvgMarkup() {
+  const paths = LEGACY_ROUTE_LINES.map((line, index) => `<path class="route-line ${index === 0 || index === LEGACY_ROUTE_LINES.length - 1 ? "route-line--main" : ""}" d="M ${line.map(legacyGridPoint).join(" L ")}" />`).join("");
   return `<svg class="route-network" viewBox="0 0 14 12" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>`;
 }
 
-function renderBoard() {
-  const positions = state.players.reduce((accumulator, player) => {
+function playerPositions() {
+  return state.players.reduce((accumulator, player) => {
     (accumulator[player.spaceId] ||= []).push(player);
     return accumulator;
   }, {});
+}
+
+function renderLegacyBoard() {
+  elements.board.classList.remove("board-grid--hex");
+  const positions = playerPositions();
   const activeSpaceId = currentPlayer()?.spaceId;
-  const spaces = SPACES.map((space) => {
+  const spaces = LEGACY_SPACES.map((space) => {
     const [row, column] = space.grid;
     const tokens = (positions[space.id] || []).map((player) => carMarkup(player, player.id === currentPlayer()?.id)).join("");
     return `<div class="space ${space.type} ${space.id === activeSpaceId ? "is-current-space" : ""}" style="grid-row:${row};grid-column:${column}" aria-label="${escapeHtml(space.label)}：${escapeHtml(space.sub)}">
@@ -294,12 +395,81 @@ function renderBoard() {
       <span class="tokens">${tokens}</span>
     </div>`;
   }).join("");
-  const signposts = BRANCH_SIGNPOSTS.map((signpost) => `<div class="branch-sign" style="grid-row:${signpost.grid[0]};grid-column:${signpost.grid[1]}">${signpost.label}</div>`).join("");
+  const signposts = LEGACY_BRANCH_SIGNPOSTS.map((signpost) => `<div class="branch-sign" style="grid-row:${signpost.grid[0]};grid-column:${signpost.grid[1]}">${signpost.label}</div>`).join("");
 
-  elements.board.innerHTML = `${routeSvgMarkup()}${spaces}${signposts}
+  elements.board.innerHTML = `${legacyRouteSvgMarkup()}${spaces}${signposts}
     <div class="board-center" aria-hidden="true">
       <div class="center-orbit"><div class="center-copy"><span>THREE ROUTES, ONE LIFE</span><strong>人生の<br />交差点</strong><small>3つの分岐で、あなたらしい道を選ぼう。</small></div></div>
     </div>`;
+}
+
+function hexBoardLayout(hexCourse) {
+  const rawPoints = hexCourse.nodes.map((node) => ({
+    id: node.id,
+    x: node.q * 1.5,
+    y: (node.r + node.q / 2) * Math.sqrt(3),
+  }));
+  const minX = Math.min(...rawPoints.map((point) => point.x));
+  const maxX = Math.max(...rawPoints.map((point) => point.x));
+  const minY = Math.min(...rawPoints.map((point) => point.y));
+  const maxY = Math.max(...rawPoints.map((point) => point.y));
+  const padding = 1.3;
+  const width = maxX - minX + padding * 2;
+  const height = maxY - minY + padding * 2;
+  const pointById = Object.fromEntries(rawPoints.map((point) => [point.id, {
+    x: point.x - minX + padding,
+    y: point.y - minY + padding,
+  }]));
+  return { width, height, pointById };
+}
+
+function hexPolygonPoints(point, radius = .92) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const angle = (Math.PI / 3) * index;
+    return `${(point.x + Math.cos(angle) * radius).toFixed(2)},${(point.y + Math.sin(angle) * radius).toFixed(2)}`;
+  }).join(" ");
+}
+
+function boardLabel(label) {
+  return label.length > 7 ? `${label.slice(0, 6)}…` : label;
+}
+
+function renderHexBoard(course) {
+  elements.board.classList.add("board-grid--hex");
+  const positions = playerPositions();
+  const activeSpaceId = currentPlayer()?.spaceId;
+  const { width, height, pointById } = hexBoardLayout(course.hexCourse);
+  const routes = course.hexCourse.edges.map((edge) => {
+    const from = pointById[edge.from];
+    const to = pointById[edge.to];
+    return `<line class="hex-route hex-route--${edge.role}" x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />`;
+  }).join("");
+  const spaces = course.spaces.map((space) => {
+    const point = pointById[space.id];
+    return `<g class="hex-space hex-space--${space.type} ${space.id === activeSpaceId ? "is-current-space" : ""}" role="img" aria-label="${escapeHtml(space.label)}：${escapeHtml(space.sub)}">
+      <polygon points="${hexPolygonPoints(point)}" />
+      <text class="hex-space-icon" x="${point.x.toFixed(2)}" y="${(point.y - .16).toFixed(2)}" aria-hidden="true">${space.icon}</text>
+      <text class="hex-space-label" x="${point.x.toFixed(2)}" y="${(point.y + .43).toFixed(2)}">${escapeHtml(boardLabel(space.label))}</text>
+      ${space.routeOptions ? `<text class="hex-branch-mark" x="${(point.x + .57).toFixed(2)}" y="${(point.y - .47).toFixed(2)}" aria-hidden="true">↯</text>` : ""}
+    </g>`;
+  }).join("");
+  const tokens = Object.entries(positions).map(([spaceId, players]) => {
+    const point = pointById[spaceId];
+    if (!point) return "";
+    return `<div class="hex-tokens" style="--hex-left:${(point.x / width * 100).toFixed(3)}%;--hex-top:${(point.y / height * 100).toFixed(3)}%">${players.map((player) => carMarkup(player, player.id === currentPlayer()?.id)).join("")}</div>`;
+  }).join("");
+  elements.board.innerHTML = `<svg class="hex-board-svg" viewBox="0 0 ${width.toFixed(2)} ${height.toFixed(2)}" role="img" aria-label="シード ${course.seed} のヘックス人生ルーレット盤">
+      <title>シード ${course.seed} のヘックス人生ルーレット盤</title>
+      <rect class="hex-board-background" x="0" y="0" width="${width.toFixed(2)}" height="${height.toFixed(2)}" rx="1" />
+      <g class="hex-route-layer">${routes}</g>
+      <g class="hex-space-layer">${spaces}</g>
+    </svg><div class="hex-token-layer">${tokens}</div>`;
+}
+
+function renderBoard() {
+  const course = activeCourse();
+  if (course.kind === "hex") renderHexBoard(course);
+  else renderLegacyBoard();
 }
 
 function renderPlayers() {
@@ -326,7 +496,7 @@ function renderCurrentPlayer() {
     return;
   }
   const space = currentSpace(player);
-  const next = nextSpaceId(player) ? SPACE_BY_ID[nextSpaceId(player)] : null;
+  const next = nextSpaceId(player) ? activeSpaceById(nextSpaceId(player)) : null;
   elements.currentPlayerCard.innerHTML = `
     <div class="current-player-top">
       <div class="current-player-name">${portraitMarkup(characterProfile(player.characterId), "current-player-avatar", `${player.name}のキャラクター`)}<span><i class="current-player-color" style="background:${player.color}"></i>${escapeHtml(player.name)}の番</span></div>
@@ -335,7 +505,9 @@ function renderCurrentPlayer() {
     <div class="current-player-money">${money(player.cash)}</div>
     <div class="current-player-job">趣味：${escapeHtml(player.hobby)} · 夢：${escapeHtml(player.dreamJob)}<br />毎回の収入 ${money(player.salary)}</div>
     <div class="family-meter">${carMarkup(player)}<span>${familySummary(player)}</span></div>`;
-  elements.turnBanner.innerHTML = `<span class="turn-color" style="background:${player.color}"></span><strong>${escapeHtml(player.name)}</strong> の番です。${space.routeOptions ? "進路を決めて、次の人生へ。" : "運命のサイコロを振ろう。"}`;
+  const course = activeCourse();
+  const seedBadge = course.seed ? `<span class="course-seed" title="同じシードなら同じヘックスコースになります">HEX #${course.seed}</span>` : "";
+  elements.turnBanner.innerHTML = `<span class="turn-color" style="background:${player.color}"></span><strong>${escapeHtml(player.name)}</strong> の番です。${space.routeOptions ? "進路を決めて、次の人生へ。" : "運命のサイコロを振ろう。"}${seedBadge}`;
   elements.rollButton.disabled = state.isBusy || player.finished;
   elements.rollButton.setAttribute("aria-label", `${player.name}さんのサイコロを振る`);
   elements.rollButton.innerHTML = state.isBusy ? `<span class="button-icon" aria-hidden="true">⌁</span>人生を進めています` : `<span class="button-icon" aria-hidden="true">✦</span>サイコロを振る`;
@@ -350,7 +522,7 @@ function mobileRoutePreview(player, count = 7) {
     const nextId = space.routeOptions
       ? player.routes[space.id] || space.routeOptions[0]?.next
       : space.next;
-    space = nextId ? SPACE_BY_ID[nextId] : null;
+    space = nextId ? activeSpaceById(nextId) : null;
   }
   return spaces;
 }
@@ -492,11 +664,17 @@ function startGame(event) {
   if (activeName) state.setupNames[state.activeSetupPlayer] = activeName.value.trim() || characterProfile(state.setupCharacters[state.activeSetupPlayer]).name;
   const names = Array.from({ length: state.playerCount }, (_, index) => state.setupNames[index].trim() || characterProfile(state.setupCharacters[index]).name);
   state.setupNames = Array.from({ length: 4 }, (_, index) => names[index] || state.setupNames[index] || DEFAULT_NAMES[index]);
+  try {
+    state.course = buildHexGameCourse();
+  } catch (error) {
+    console.warn("ヘックスコースを生成できなかったため、固定コースを使用します。", error);
+    state.course = LEGACY_COURSE;
+  }
   state.players = names.map((name, index) => {
     const profile = characterProfile(state.setupCharacters[index]);
     return {
       id: index, name, characterId: profile.id, hobby: profile.hobby, dreamJob: profile.dreamJob, color: PLAYER_COLORS[index].value,
-      cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, spaceId: "start", steps: 0,
+      cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, spaceId: activeCourse().startId, steps: 0,
       routes: {}, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
     };
   });
@@ -509,6 +687,7 @@ function startGame(event) {
   state.pendingGoalBonus = null;
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
+  if (state.course.seed) addFeed(`HEXコース #${state.course.seed} を生成。分岐の先には別の人生が待っています。`, "choice-dot");
   elements.setupModal.classList.add("is-hidden");
   elements.resultModal.classList.add("is-hidden");
   render();
