@@ -423,7 +423,7 @@ function hexBoardLayout(hexCourse) {
   return { width, height, pointById };
 }
 
-function hexPolygonPoints(point, radius = .92) {
+function hexPolygonPoints(point, radius = .62) {
   return Array.from({ length: 6 }, (_, index) => {
     const angle = (Math.PI / 3) * index;
     return `${(point.x + Math.cos(angle) * radius).toFixed(2)},${(point.y + Math.sin(angle) * radius).toFixed(2)}`;
@@ -431,7 +431,7 @@ function hexPolygonPoints(point, radius = .92) {
 }
 
 function boardLabel(label) {
-  return label.length > 7 ? `${label.slice(0, 6)}…` : label;
+  return label.length > 6 ? `${label.slice(0, 5)}…` : label;
 }
 
 function renderHexBoard(course) {
@@ -442,15 +442,16 @@ function renderHexBoard(course) {
   const routes = course.hexCourse.edges.map((edge) => {
     const from = pointById[edge.from];
     const to = pointById[edge.to];
-    return `<line class="hex-route hex-route--${edge.role}" x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />`;
+    const coordinates = `x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}"`;
+    return `<line class="hex-route-bed hex-route-bed--${edge.role}" ${coordinates} /><line class="hex-route hex-route--${edge.role}" ${coordinates} />`;
   }).join("");
   const spaces = course.spaces.map((space) => {
     const point = pointById[space.id];
     return `<g class="hex-space hex-space--${space.type} ${space.id === activeSpaceId ? "is-current-space" : ""}" role="img" aria-label="${escapeHtml(space.label)}：${escapeHtml(space.sub)}">
       <polygon points="${hexPolygonPoints(point)}" />
-      <text class="hex-space-icon" x="${point.x.toFixed(2)}" y="${(point.y - .16).toFixed(2)}" aria-hidden="true">${space.icon}</text>
-      <text class="hex-space-label" x="${point.x.toFixed(2)}" y="${(point.y + .43).toFixed(2)}">${escapeHtml(boardLabel(space.label))}</text>
-      ${space.routeOptions ? `<text class="hex-branch-mark" x="${(point.x + .57).toFixed(2)}" y="${(point.y - .47).toFixed(2)}" aria-hidden="true">↯</text>` : ""}
+      <text class="hex-space-icon" x="${point.x.toFixed(2)}" y="${(point.y - .13).toFixed(2)}" aria-hidden="true">${space.icon}</text>
+      <text class="hex-space-label" x="${point.x.toFixed(2)}" y="${(point.y + .27).toFixed(2)}">${escapeHtml(boardLabel(space.label))}</text>
+      ${space.routeOptions ? `<text class="hex-branch-mark" x="${(point.x + .4).toFixed(2)}" y="${(point.y - .32).toFixed(2)}" aria-hidden="true">↯</text>` : ""}
     </g>`;
   }).join("");
   const tokens = Object.entries(positions).map(([spaceId, players]) => {
