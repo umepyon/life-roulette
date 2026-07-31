@@ -171,10 +171,10 @@ const GENERATED_EVENT_TEMPLATES = [
   { label: "週末の旅", sub: "思い出", icon: "🗺", type: "event", amount: -10000 },
 ];
 
-function buildHexGameCourse() {
+function buildHexGameCourse(courseSize = state.courseSize) {
   const hexApi = globalThis.LifeRouletteHex || globalThis.window?.LifeRouletteHex;
   if (!hexApi) return LEGACY_COURSE;
-  const hexCourse = hexApi.generateHexCourse();
+  const hexCourse = hexApi.generateHexCourse(undefined, { size: courseSize });
   const graph = hexApi.createRouteGraph(hexCourse);
   const random = hexApi.createRandom(`${hexCourse.seed}:events`);
   const mainIndexById = new Map(hexCourse.mainRoute.map((id, index) => [id, index]));
@@ -182,11 +182,22 @@ function buildHexGameCourse() {
   const templates = random.shuffle(GENERATED_EVENT_TEMPLATES);
   const spaceById = {};
   const mainLength = hexCourse.mainRoute.length;
-  const moveBackIndex = 5;
-  const partnerIndex = 13;
-  const skipTurnIndex = 14;
-  const swapLeaderIndex = mainLength - 6;
-  const childIndex = mainLength - 4;
+  const milestones = hexCourse.size === "small"
+    ? {
+      moveBackIndex: 5,
+      partnerIndex: 13,
+      skipTurnIndex: 14,
+      swapLeaderIndex: mainLength - 6,
+      childIndex: mainLength - 4,
+    }
+    : {
+      moveBackIndex: Math.round((mainLength - 1) * .18),
+      partnerIndex: Math.round((mainLength - 1) * .34),
+      skipTurnIndex: Math.round((mainLength - 1) * .39),
+      swapLeaderIndex: Math.round((mainLength - 1) * .70),
+      childIndex: Math.round((mainLength - 1) * .85),
+    };
+  const { moveBackIndex, partnerIndex, skipTurnIndex, swapLeaderIndex, childIndex } = milestones;
   const returnStartIndex = mainLength - 2;
   let templateIndex = 0;
 
@@ -238,6 +249,8 @@ function buildHexGameCourse() {
   return {
     kind: "hex",
     seed: hexCourse.seed,
+    size: hexCourse.size,
+    sizeLabel: hexCourse.sizeLabel,
     hexCourse,
     spaces: hexCourse.nodes.map((node) => spaceById[node.id]),
     spaceById,
@@ -264,6 +277,7 @@ const elements = {
   mobileDriveView: document.querySelector("#mobile-drive-view"),
   eventFeed: document.querySelector("#event-feed"),
   setupModal: document.querySelector("#setup-modal"),
+  courseSizePicker: document.querySelector("#course-size-picker"),
   choiceModal: document.querySelector("#choice-modal"),
   eventModal: document.querySelector("#event-modal"),
   giftModal: document.querySelector("#gift-modal"),
@@ -309,6 +323,7 @@ const state = {
   pendingGoalBonus: null,
   feed: [],
   playerCount: 2,
+  courseSize: "small",
   setupNames: [...DEFAULT_NAMES],
   setupCharacters: [...DEFAULT_CHARACTER_IDS],
   activeSetupPlayer: 0,
@@ -597,7 +612,7 @@ function renderCurrentPlayer() {
     <div class="current-player-job">趣味：${escapeHtml(player.hobby)} · 夢：${escapeHtml(player.dreamJob)}<br />毎回の収入 ${money(player.salary)}</div>
     <div class="family-meter">${carMarkup(player)}<span>${familySummary(player)}</span></div>`;
   const course = activeCourse();
-  const seedBadge = course.seed ? `<span class="course-seed" title="同じシードなら同じヘックスコースになります">HEX #${course.seed}</span>` : "";
+  const seedBadge = course.seed ? `<span class="course-seed" title="同じシードなら同じヘックスコースになります">${escapeHtml(course.sizeLabel || "ヘックスコース")} · HEX #${course.seed}</span>` : "";
   elements.turnBanner.innerHTML = `<span class="turn-color" style="background:${player.color}"></span><strong>${escapeHtml(player.name)}</strong> の番です。${space.routeOptions ? "進路を決めて、次の人生へ。" : "運命のサイコロを振ろう。"}${seedBadge}`;
   const canRoll = canControlPlayer(player.id);
   elements.rollButton.disabled = state.isBusy || player.finished || !canRoll;
@@ -631,7 +646,8 @@ function renderMobileDrive() {
     return;
   }
   const space = currentSpace(player);
-  const progress = Math.min(100, Math.round((player.steps / 34) * 100));
+  const mainRouteLength = activeCourse().hexCourse?.mainRoute?.length || 35;
+  const progress = Math.min(100, Math.round((player.steps / Math.max(1, mainRouteLength - 1)) * 100));
   const drivingMessage = state.isBusy ? `サイコロの目 ${state.dice}。1マスずつ進行中！` : `いまは「${space.label}」にいます`;
   const track = mobileRoutePreview(player);
   elements.mobileDriveView.classList.toggle("is-moving", state.isBusy);
@@ -704,6 +720,9 @@ function renderSetup() {
   normalizeSetupCharacters();
   state.activeSetupPlayer = Math.min(state.activeSetupPlayer, state.playerCount - 1);
   document.querySelectorAll("[data-player-count]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.playerCount) === state.playerCount));
+  elements.courseSizePicker.querySelectorAll("input[name='course-size']").forEach((input) => {
+    input.checked = input.value === state.courseSize;
+  });
   elements.setupPlayerTabs.innerHTML = Array.from({ length: state.playerCount }, (_, index) => {
     const profile = characterProfile(state.setupCharacters[index]);
     return `<button class="setup-player-tab ${index === state.activeSetupPlayer ? "is-active" : ""}" type="button" data-setup-player="${index}" aria-pressed="${index === state.activeSetupPlayer}">
@@ -786,7 +805,7 @@ function startGame(event) {
   state.showingResults = false;
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
-  if (state.course.seed) addFeed(`HEXコース #${state.course.seed} を生成。分岐の先には別の人生が待っています。`, "choice-dot");
+  if (state.course.seed) addFeed(`${state.course.sizeLabel || "ヘックス"}（${state.course.hexCourse?.mainRoute.length || "?"}マス） #${state.course.seed} を生成。分岐の先には別の人生が待っています。`, "choice-dot");
   elements.playerDetails.open = !window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
   elements.setupModal.classList.add("is-hidden");
   elements.resultModal.classList.add("is-hidden");
@@ -1455,6 +1474,11 @@ document.querySelectorAll("[data-player-count]").forEach((button) => button.addE
   state.playerCount = Number(button.dataset.playerCount);
   renderSetup();
 }));
+elements.courseSizePicker.addEventListener("change", (event) => {
+  if (!event.target.matches("input[name='course-size']")) return;
+  state.courseSize = event.target.value;
+  renderSetup();
+});
 elements.setupPlayerTabs.addEventListener("click", (event) => {
   const tab = event.target.closest("[data-setup-player]");
   if (!tab) return;

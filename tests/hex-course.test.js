@@ -10,14 +10,11 @@ const {
 } = require("../hex-course.js");
 
 const sampleSeed = 20260731;
-const first = generateHexCourse(sampleSeed);
-const second = generateHexCourse(sampleSeed);
-
-assert.deepEqual(first, second, "同じシードでは同じコースになる");
-assert.equal(validateHexCourse(first).valid, true, "サンプルコースは有効である");
-assert.equal(first.branches.length, 2, "分岐は2本生成される");
-assert.equal(first.mainRoute.length, 27, "メインルートは27マスである");
-assert.notEqual(courseFingerprint(first), courseFingerprint(generateHexCourse(sampleSeed + 1)), "異なるシードではコースが変わる");
+const COURSE_SIZES = {
+  small: { label: "小コース", mainRouteCells: 27 },
+  medium: { label: "中コース", mainRouteCells: 60 },
+  large: { label: "大コース", mainRouteCells: 100 },
+};
 
 function reachesGoal(course, graph, branchChoices) {
   let current = course.startId;
@@ -32,13 +29,13 @@ function reachesGoal(course, graph, branchChoices) {
   }
 }
 
-const graph = createRouteGraph(first);
-[[false, false], [false, true], [true, false], [true, true]].forEach((branchChoices) => reachesGoal(first, graph, branchChoices));
-
-for (let seed = 1; seed <= 200; seed += 1) {
-  const course = generateHexCourse(seed);
+function assertValidCourse(course, { size, seed }) {
   const validation = validateHexCourse(course);
   assert.equal(validation.valid, true, `seed ${seed}: ${validation.errors.join(" / ")}`);
+  assert.equal(course.size, size, `${size}: コース規模が一致する`);
+  assert.equal(course.sizeLabel, COURSE_SIZES[size].label, `${size}: コース名が一致する`);
+  assert.equal(course.branches.length, 2, `${size}: 分岐は2本生成される`);
+  assert.equal(course.mainRoute.length, COURSE_SIZES[size].mainRouteCells, `${size}: メインルートのマス数が一致する`);
   const generatedGraph = createRouteGraph(course);
   [[false, false], [false, true], [true, false], [true, true]].forEach((branchChoices) => reachesGoal(course, generatedGraph, branchChoices));
   course.edges.forEach((edge) => {
@@ -63,4 +60,18 @@ for (let seed = 1; seed <= 200; seed += 1) {
   }
 }
 
-console.log("hex-course: 200 seeds validated");
+for (const size of Object.keys(COURSE_SIZES)) {
+  const first = generateHexCourse(sampleSeed, { size });
+  const second = generateHexCourse(sampleSeed, { size });
+  assert.deepEqual(first, second, `${size}: 同じシードでは同じコースになる`);
+  assertValidCourse(first, { size, seed: sampleSeed });
+
+  for (let seed = 1; seed <= 200; seed += 1) {
+    assertValidCourse(generateHexCourse(seed, { size }), { size, seed });
+  }
+}
+
+const smallFirst = generateHexCourse(sampleSeed, { size: "small" });
+assert.notEqual(courseFingerprint(smallFirst), courseFingerprint(generateHexCourse(sampleSeed + 1, { size: "small" })), "小コースでは異なるシードでコースが変わる");
+
+console.log("hex-course: 3 sizes × 200 seeds validated");

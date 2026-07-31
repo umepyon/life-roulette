@@ -6,11 +6,55 @@
     { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
   ]);
 
+  const COURSE_SIZES = Object.freeze({
+    small: Object.freeze({
+      size: "small",
+      label: "小コース",
+      mainEdges: 26,
+      radius: 9,
+      branchCount: 2,
+      maximumAttempts: 2000,
+    }),
+    medium: Object.freeze({
+      size: "medium",
+      label: "中コース",
+      mainEdges: 59,
+      radius: 14,
+      branchCount: 2,
+      template: "medium",
+    }),
+    large: Object.freeze({
+      size: "large",
+      label: "大コース",
+      mainEdges: 99,
+      radius: 22,
+      branchCount: 2,
+      template: "large",
+    }),
+  });
+
   const DEFAULT_CONFIG = Object.freeze({
+    ...COURSE_SIZES.small,
     radius: 9,
-    mainEdges: 26,
-    branchCount: 2,
-    maximumAttempts: 2000,
+  });
+
+  const COURSE_TEMPLATES = Object.freeze({
+    medium: Object.freeze({
+      start: Object.freeze({ q: -7, r: 0 }),
+      mainDirections: "43223343211010121110501050545445501100500505445054500111101",
+      branches: Object.freeze([
+        Object.freeze({ fromIndex: 15, toIndex: 28, directions: "05001010" }),
+        Object.freeze({ fromIndex: 33, toIndex: 47, directions: "45555550010101" }),
+      ]),
+    }),
+    large: Object.freeze({
+      start: Object.freeze({ q: -12, r: 0 }),
+      mainDirections: "444450545555055550101123232212211232122101001005050100122332321110121010110105010112333333434323334",
+      branches: Object.freeze([
+        Object.freeze({ fromIndex: 25, toIndex: 48, directions: "111105010112212233221" }),
+        Object.freeze({ fromIndex: 55, toIndex: 78, directions: "005501222211111112321" }),
+      ]),
+    }),
   });
 
   function hexKey(hex) {
@@ -19,6 +63,45 @@
 
   function copyHex(hex) {
     return { q: hex.q, r: hex.r };
+  }
+
+  function transformHex(hex, rotation, mirrored) {
+    let transformed = mirrored ? { q: hex.q, r: -hex.q - hex.r } : copyHex(hex);
+    for (let index = 0; index < rotation; index += 1) {
+      transformed = { q: transformed.q + transformed.r, r: -transformed.q };
+    }
+    return transformed;
+  }
+
+  function transformedDirectionIndex(index, rotation, mirrored) {
+    const mirroredIndex = mirrored ? [1, 0, 5, 4, 3, 2][index] : index;
+    return (mirroredIndex + rotation) % HEX_DIRECTIONS.length;
+  }
+
+  function pathFromDirections(start, directions, rotation, mirrored) {
+    const path = [copyHex(start)];
+    [...directions].forEach((character) => {
+      const direction = HEX_DIRECTIONS[transformedDirectionIndex(Number(character), rotation, mirrored)];
+      const current = path[path.length - 1];
+      path.push({ q: current.q + direction.q, r: current.r + direction.r });
+    });
+    return path;
+  }
+
+  function createTemplatePaths(templateName, seed) {
+    const template = COURSE_TEMPLATES[templateName];
+    if (!template) return null;
+    const random = createRandom(`${seed}:${templateName}:layout`);
+    const rotation = random.integer(0, HEX_DIRECTIONS.length - 1);
+    const mirrored = random.next() >= .5;
+    const start = transformHex(template.start, rotation, mirrored);
+    const mainPath = pathFromDirections(start, template.mainDirections, rotation, mirrored);
+    const branchPaths = template.branches.map((branch) => {
+      const branchPath = pathFromDirections(mainPath[branch.fromIndex], branch.directions, rotation, mirrored);
+      const merge = mainPath[branch.toIndex];
+      return sameHex(branchPath[branchPath.length - 1], merge) ? branchPath : null;
+    });
+    return branchPaths.every(Boolean) ? { mainPath, branchPaths } : null;
   }
 
   function sameHex(first, second) {
@@ -95,6 +178,10 @@
     }
 
     if (!isGoal && usedKeys.has(candidateKey)) return false;
+    return hasOnlyAllowedNeighbors(candidate, usedKeys, allowedNeighborKeys);
+  }
+
+  function hasOnlyAllowedNeighbors(candidate, usedKeys, allowedNeighborKeys) {
     return hexNeighbors(candidate).every((neighbor) => {
       const neighborKey = hexKey(neighbor);
       return !usedKeys.has(neighborKey) || allowedNeighborKeys.has(neighborKey);
@@ -201,6 +288,8 @@
       version: 1,
       seed,
       attempt,
+      size: config.size,
+      sizeLabel: config.label,
       bounds: { radius: config.radius },
       startId: nodeId(start),
       goalId: nodeId(goal),
@@ -297,8 +386,18 @@
   }
 
   function generateHexCourse(inputSeed = createCourseSeed(), options = {}) {
-    const config = { ...DEFAULT_CONFIG, ...options };
+    const selectedSize = COURSE_SIZES[options.size] || COURSE_SIZES.small;
+    const config = { ...DEFAULT_CONFIG, ...selectedSize, ...options };
     const seed = normalizeSeed(inputSeed);
+    if (config.template) {
+      const paths = createTemplatePaths(config.template, seed);
+      if (paths) {
+        const course = createCourseFromPaths({ seed, attempt: 0, config, ...paths });
+        const validation = validateHexCourse(course, config.branchCount);
+        if (validation.valid) return course;
+      }
+    }
+
     const start = { q: -config.radius, r: 0 };
     const goal = { q: config.radius, r: 0 };
 
@@ -340,6 +439,7 @@
   }
 
   const api = Object.freeze({
+    COURSE_SIZES,
     DEFAULT_CONFIG,
     HEX_DIRECTIONS,
     createCourseSeed,
