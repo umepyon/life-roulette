@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-- 依存関係なしの HTML / CSS / JavaScript による、同一画面で2〜4人が遊ぶ人生すごろく。
+- HTML / CSS / JavaScript による、同一画面またはオンラインで2〜4人が遊ぶ人生すごろく。オンライン部屋のみ Supabase JavaScript CDN を利用する。
 - 公開先は GitHub Pages: <https://umepyon.github.io/life-roulette/>
 - Nintendo や他社ゲームのキャラクター、ロゴ、素材を使わない。画像・演出はオリジナルで作る。
 
@@ -30,6 +30,8 @@
 - GOALの1つ手前は必ず「スタートに戻る」。止まると所持金を半分にしてSTARTへ戻す。
 - PC盤面では、プレイヤーのオープンカーに結婚・子どもに応じた人数を乗せる。
 - イベントは場面に合ったオリジナルのアニメ調画像を表示する。
+- オンライン部屋ではホスト端末がゲーム状態を管理し、参加者は部屋コードで入室して自分に割り当てられた番だけ操作する。ホストが閉じると部屋は終了する。
+- `supabase-config.js` には公開URLと publishable key のみを置く。secret key / service_role key / パスワードは絶対にコミットしない。
 
 ## レイアウト方針
 

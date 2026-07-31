@@ -40,7 +40,7 @@
       <main id="game" class="game-page">
         <section class="game-intro" aria-labelledby="game-title">
           <div>
-            <p class="eyebrow">LOCAL MULTIPLAYER · 2–4 PLAYERS</p>
+            <p class="eyebrow">2–4 PLAYERS · LOCAL OR ONLINE</p>
             <h1 id="game-title">今日から、わたしたちの人生。</h1>
             <p>分岐でルートを選び、家族とオープンカーで進もう。<br />ゴールでいちばん資産を残した人の勝ち。</p>
           </div>
@@ -85,6 +85,7 @@
           </section>
 
           <aside class="panel action-panel" aria-labelledby="action-heading">
+            <section id="online-room-panel" class="online-room-panel" hidden aria-live="polite"></section>
             <div class="panel-heading">
               <p class="eyebrow">YOUR TURN</p>
               <h2 id="action-heading">運命のサイコロ</h2>
@@ -106,7 +107,7 @@
 
       <footer>
         <span>人生ルーレット</span>
-        <span>オリジナルのローカル対戦ボードゲーム</span>
+          <span>オリジナルの対戦ボードゲーム</span>
       </footer>
     </div>
 
@@ -121,6 +122,22 @@
           <button type="button" data-player-count="3">3人</button>
           <button type="button" data-player-count="4">4人</button>
         </div>
+        <section class="online-setup" aria-labelledby="online-setup-title">
+          <div>
+            <p class="online-setup-kicker">ONLINE ROOM</p>
+            <h3 id="online-setup-title">別の端末から参加する</h3>
+            <p>部屋コードを共有すると、参加者は自分の順番だけ操作できます。</p>
+          </div>
+          <div class="online-setup-actions">
+            <button id="online-host-button" class="secondary-button" type="button">部屋をつくる</button>
+            <button id="online-join-button" class="secondary-button" type="button">部屋に参加</button>
+          </div>
+          <form id="online-join-form" class="online-join-form" hidden>
+            <label for="online-room-code">部屋コード</label>
+            <div><input id="online-room-code" inputmode="text" autocomplete="off" maxlength="8" placeholder="例：AB12CD34" /><button class="start-button" type="submit">参加する</button></div>
+            <p id="online-join-status" class="online-join-status" aria-live="polite"></p>
+          </form>
+        </section>
         <div id="setup-player-tabs" class="setup-player-tabs" aria-label="設定するプレイヤー"></div>
         <form id="setup-form">
           <div class="setup-profile-layout">
@@ -224,7 +241,10 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="hex-course.js"></script>
     <script src="app.js"></script>
+    <script src="online.js"></script>
   </body>
 </html>

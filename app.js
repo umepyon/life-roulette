@@ -312,7 +312,20 @@ const state = {
   setupNames: [...DEFAULT_NAMES],
   setupCharacters: [...DEFAULT_CHARACTER_IDS],
   activeSetupPlayer: 0,
+  showingResults: false,
 };
+
+function onlineBridge() {
+  return window.lifeRouletteOnline || null;
+}
+
+function canControlPlayer(playerId) {
+  return onlineBridge()?.canControlPlayer?.(playerId) ?? true;
+}
+
+function publishOnlineState() {
+  onlineBridge()?.publishSnapshot?.();
+}
 
 function money(amount) {
   const absolute = Math.abs(amount).toLocaleString("ja-JP");
@@ -593,10 +606,15 @@ function renderCurrentPlayer() {
   const course = activeCourse();
   const seedBadge = course.seed ? `<span class="course-seed" title="同じシードなら同じヘックスコースになります">HEX #${course.seed}</span>` : "";
   elements.turnBanner.innerHTML = `<span class="turn-color" style="background:${player.color}"></span><strong>${escapeHtml(player.name)}</strong> の番です。${space.routeOptions ? "進路を決めて、次の人生へ。" : "運命のサイコロを振ろう。"}${seedBadge}`;
-  elements.rollButton.disabled = state.isBusy || player.finished;
+  const canRoll = canControlPlayer(player.id);
+  elements.rollButton.disabled = state.isBusy || player.finished || !canRoll;
   elements.rollButton.setAttribute("aria-label", `${player.name}さんのサイコロを振る`);
   elements.rollButton.innerHTML = state.isBusy ? `<span class="button-icon" aria-hidden="true">⌁</span>人生を進めています` : `<span class="button-icon" aria-hidden="true">✦</span>サイコロを振る`;
-  elements.rollHint.textContent = state.isBusy ? "オープンカーがマス目を進んでいます…" : next ? `次は「${next.label}」の方向へ。` : "分岐で行き先を選んでください。";
+  elements.rollHint.textContent = state.isBusy
+    ? "オープンカーがマス目を進んでいます…"
+    : !canRoll
+      ? `${player.name}さんの端末でサイコロを振ってください。`
+      : next ? `次は「${next.label}」の方向へ。` : "分岐で行き先を選んでください。";
 }
 
 function mobileRoutePreview(player, count = 7) {
@@ -660,6 +678,7 @@ function render() {
   elements.dice.innerHTML = diceMarkup(state.dice);
   elements.dice.classList.toggle("rolling", state.isBusy);
   renderFeed();
+  publishOnlineState();
 }
 
 function addFeed(text, tone = "") {
@@ -771,12 +790,17 @@ function startGame(event) {
   state.pendingEvent = null;
   state.pendingGift = null;
   state.pendingGoalBonus = null;
+  state.showingResults = false;
   state.feed = [];
   addFeed(`${names.join("・")}の人生がスタート！ オープンカーで出発。`, "choice-dot");
   if (state.course.seed) addFeed(`HEXコース #${state.course.seed} を生成。分岐の先には別の人生が待っています。`, "choice-dot");
   elements.playerDetails.open = !window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
   elements.setupModal.classList.add("is-hidden");
   elements.resultModal.classList.add("is-hidden");
+  elements.choiceModal.classList.add("is-hidden");
+  elements.eventModal.classList.add("is-hidden");
+  elements.giftModal.classList.add("is-hidden");
+  elements.goalBonusModal.classList.add("is-hidden");
   render();
   toast("ゲームをはじめます。最初のサイコロをどうぞ！");
 }
@@ -969,17 +993,31 @@ function openLandingCard(player, space, amount) {
 function openLifeEvent(player, { scene, title, amount, amountLabel = "", amountTone = "", resumeSteps = null, followup = null, description = "", icon = "" }) {
   const sceneConfig = EVENT_SCENES[scene];
   if (!sceneConfig) return false;
-  state.pendingEvent = { playerId: player.id, scene, resumeSteps, followup };
-  elements.eventScene.className = `event-scene event-scene--${scene}`;
-  elements.eventScene.dataset.eventIcon = icon;
+  state.pendingEvent = {
+    playerId: player.id, scene, title, amount, amountLabel, amountTone, resumeSteps, followup,
+    description: description || eventDescription(scene, player, title) || "", icon,
+  };
+  renderLifeEvent();
+  publishOnlineState();
+  return true;
+}
+
+function renderLifeEvent() {
+  const pending = state.pendingEvent;
+  const player = pending && state.players.find((entry) => entry.id === pending.playerId);
+  const sceneConfig = pending && EVENT_SCENES[pending.scene];
+  if (!pending || !player || !sceneConfig) return;
+  elements.eventScene.className = `event-scene event-scene--${pending.scene}`;
+  elements.eventScene.dataset.eventIcon = pending.icon || "";
   elements.eventScene.setAttribute("aria-label", sceneConfig.label);
   elements.eventKicker.textContent = sceneConfig.kicker;
-  elements.eventTitle.textContent = title;
-  elements.eventDescription.textContent = description || eventDescription(scene, player, title) || "";
-  elements.eventAmount.className = `event-amount ${amountTone || (amount < 0 ? "is-negative" : "is-positive")}`;
-  elements.eventAmount.textContent = amountLabel || `${amount >= 0 ? "+" : ""}${money(amount)}`;
+  elements.eventTitle.textContent = pending.title;
+  elements.eventDescription.textContent = pending.description;
+  elements.eventAmount.className = `event-amount ${pending.amountTone || (pending.amount < 0 ? "is-negative" : "is-positive")}`;
+  elements.eventAmount.textContent = pending.amountLabel || `${pending.amount >= 0 ? "+" : ""}${money(pending.amount)}`;
+  elements.eventContinue.disabled = !canControlPlayer(player.id);
+  elements.eventContinue.setAttribute("aria-label", canControlPlayer(player.id) ? "つぎの人生へ進む" : `${player.name}さんの端末で続けてください`);
   elements.eventModal.classList.remove("is-hidden");
-  return true;
 }
 
 function continueAfterLifeEvent() {
@@ -987,6 +1025,7 @@ function continueAfterLifeEvent() {
   if (!pendingEvent) return;
   state.pendingEvent = null;
   elements.eventModal.classList.add("is-hidden");
+  publishOnlineState();
   if (pendingEvent.followup?.type === "gift") {
     startGiftCollection(pendingEvent.playerId, pendingEvent.followup, pendingEvent.resumeSteps);
     return;
@@ -1021,6 +1060,7 @@ function startGiftCollection(recipientId, { celebration }, resumeSteps = null) {
   };
   renderGiftCollection();
   elements.giftModal.classList.remove("is-hidden");
+  publishOnlineState();
 }
 
 function currentGiftPayer() {
@@ -1045,7 +1085,7 @@ function renderGiftCollection() {
   elements.giftResult.textContent = isResult
     ? `出目 ${result.roll}：${money(result.paid)} を渡しました`
     : `ご祝儀の金額はサイコロで決まります。${nextPayer ? `次は${nextPayer.name}さんも振ります。` : ""}`;
-  elements.giftRoll.disabled = gift.phase === "rolling";
+  elements.giftRoll.disabled = gift.phase === "rolling" || !canControlPlayer(payer.id);
   elements.giftRoll.setAttribute("aria-label", isResult ? "次のご祝儀へ進む" : `${payer.name}さんがご祝儀のサイコロを振る`);
   elements.giftRoll.innerHTML = gift.phase === "rolling"
     ? `<span class="button-icon" aria-hidden="true">⌁</span>サイコロを振っています`
@@ -1061,6 +1101,7 @@ function rollGiftDice() {
   gift.phase = "rolling";
   gift.lastResult = { roll: Math.floor(Math.random() * 6) + 1 };
   renderGiftCollection();
+  publishOnlineState();
   window.setTimeout(settleGiftDice, 520);
 }
 
@@ -1094,6 +1135,7 @@ function continueGiftCollection() {
     gift.phase = "prompt";
     gift.lastResult = null;
     renderGiftCollection();
+    publishOnlineState();
     return;
   }
   const recipient = state.players.find((player) => player.id === gift.recipientId);
@@ -1135,6 +1177,7 @@ function startGoalBonus(player) {
   state.pendingGoalBonus = { playerId: player.id, phase: "prompt", roll: null, amount: null };
   renderGoalBonus();
   elements.goalBonusModal.classList.remove("is-hidden");
+  publishOnlineState();
 }
 
 function renderGoalBonus() {
@@ -1151,7 +1194,7 @@ function renderGoalBonus() {
   elements.goalBonusResult.textContent = isResult
     ? (bonus.amount < 0 ? `出目 ${bonus.roll}：カジノで大損 −1,000万円` : `出目 ${bonus.roll}：変化なし`)
     : "出目1だけは −1,000万円です。";
-  elements.goalBonusRoll.disabled = bonus.phase === "rolling";
+  elements.goalBonusRoll.disabled = bonus.phase === "rolling" || !canControlPlayer(player.id);
   elements.goalBonusRoll.setAttribute("aria-label", isResult ? "ゴールの結果を見る" : `${player.name}さんがゴール後の運命サイコロを振る`);
   elements.goalBonusRoll.innerHTML = bonus.phase === "rolling"
     ? `<span class="button-icon" aria-hidden="true">⌁</span>運命を決めています`
@@ -1166,6 +1209,7 @@ function rollGoalBonus() {
   bonus.phase = "rolling";
   bonus.roll = Math.floor(Math.random() * 6) + 1;
   renderGoalBonus();
+  publishOnlineState();
   window.setTimeout(settleGoalBonus, 520);
 }
 
@@ -1241,9 +1285,21 @@ function resolveLanding(player) {
 
 function openRouteChoice(player, space) {
   state.pendingChoice = { type: "route", playerId: player.id, spaceId: space.id, options: space.routeOptions };
+  renderRouteChoice();
+  publishOnlineState();
+}
+
+function renderRouteChoice() {
+  const pending = state.pendingChoice;
+  const player = pending && state.players.find((entry) => entry.id === pending.playerId);
+  const space = pending && activeSpaceById(pending.spaceId);
+  if (!pending || !player || !space) return;
+  const canChoose = canControlPlayer(player.id);
   elements.choiceTitle.textContent = space.label;
-  elements.choiceDescription.textContent = `${player.name}、${space.sub}。どちらの道を進む？`;
-  elements.choiceOptions.innerHTML = space.routeOptions.map((option, index) => `<button class="choice-option route-option" type="button" data-choice-option="${index}"><strong><span class="route-option-arrow">↗</span>${option.title}</strong><span>${option.detail}</span><em>このルートへ進む</em></button>`).join("");
+  elements.choiceDescription.textContent = canChoose
+    ? `${player.name}、${space.sub}。どちらの道を進む？`
+    : `${player.name}さんが、別の端末で進路を選んでいます。`;
+  elements.choiceOptions.innerHTML = pending.options.map((option, index) => `<button class="choice-option route-option" type="button" data-choice-option="${index}" ${canChoose ? "" : "disabled"}><strong><span class="route-option-arrow">↗</span>${option.title}</strong><span>${option.detail}</span><em>このルートへ進む</em></button>`).join("");
   elements.choiceModal.classList.remove("is-hidden");
 }
 
@@ -1288,9 +1344,15 @@ function finishTurn() {
 }
 
 function showResults() {
+  state.showingResults = true;
+  renderResults();
+  elements.resultModal.classList.remove("is-hidden");
+  publishOnlineState();
+}
+
+function renderResults() {
   const standings = [...state.players].sort((first, second) => second.cash - first.cash);
   elements.resultsList.innerHTML = standings.map((player, index) => `<li class="result-row"><span class="result-place">${index === 0 ? "👑" : `${index + 1}`}</span><span class="result-color" style="background:${player.color}"></span><span class="result-name">${escapeHtml(player.name)}<span class="result-job">${escapeHtml(player.job)} · ${familySummary(player)} · ゴール ${player.finishOrder}番目</span></span><span class="result-money">${money(player.cash)}</span></li>`).join("");
-  elements.resultModal.classList.remove("is-hidden");
 }
 
 function endGame() {
@@ -1302,11 +1364,89 @@ function endGame() {
   state.pendingEvent = null;
   state.pendingGift = null;
   state.pendingGoalBonus = null;
+  state.showingResults = false;
   state.feed = [{ text: "ゲームを終了しました。おつかれさまでした。", tone: "choice-dot" }];
   elements.resultModal.classList.add("is-hidden");
   render();
   toast("ゲームを終了しました。おつかれさまでした！");
 }
+
+function sharedGameSnapshot() {
+  const snapshot = {
+    course: state.course,
+    players: state.players,
+    currentIndex: state.currentIndex,
+    dice: state.dice,
+    isBusy: state.isBusy,
+    pendingChoice: state.pendingChoice,
+    pendingEvent: state.pendingEvent,
+    pendingGift: state.pendingGift,
+    pendingGoalBonus: state.pendingGoalBonus,
+    feed: state.feed,
+    playerCount: state.playerCount,
+    showingResults: state.showingResults,
+  };
+  return JSON.parse(JSON.stringify(snapshot));
+}
+
+function syncSharedDialogs() {
+  if (state.pendingChoice) renderRouteChoice();
+  else elements.choiceModal.classList.add("is-hidden");
+  if (state.pendingEvent) renderLifeEvent();
+  else elements.eventModal.classList.add("is-hidden");
+  if (state.pendingGift) {
+    renderGiftCollection();
+    elements.giftModal.classList.remove("is-hidden");
+  } else elements.giftModal.classList.add("is-hidden");
+  if (state.pendingGoalBonus) {
+    renderGoalBonus();
+    elements.goalBonusModal.classList.remove("is-hidden");
+  } else elements.goalBonusModal.classList.add("is-hidden");
+  if (state.showingResults) {
+    renderResults();
+    elements.resultModal.classList.remove("is-hidden");
+  } else elements.resultModal.classList.add("is-hidden");
+}
+
+function applySharedGameSnapshot(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.players) || !snapshot.course) return;
+  ["course", "players", "currentIndex", "dice", "isBusy", "pendingChoice", "pendingEvent", "pendingGift", "pendingGoalBonus", "feed", "playerCount", "showingResults"].forEach((key) => {
+    if (key in snapshot) state[key] = snapshot[key];
+  });
+  elements.setupModal.classList.add("is-hidden");
+  render();
+  syncSharedDialogs();
+}
+
+function onlineActionOwner(action) {
+  if (action === "roll") return currentPlayer()?.id;
+  if (action === "choice") return state.pendingChoice?.playerId;
+  if (action === "event") return state.pendingEvent?.playerId;
+  if (action === "gift") return currentGiftPayer()?.id;
+  if (action === "goal") return state.pendingGoalBonus?.playerId;
+  return null;
+}
+
+function runOnlineAction(action, payload = {}) {
+  if (action === "roll") return rollDice();
+  if (action === "choice") return chooseOption(Number(payload.index));
+  if (action === "event") return continueAfterLifeEvent();
+  if (action === "gift") return continueGiftCollection();
+  if (action === "goal") return continueGoalBonus();
+}
+
+window.lifeRouletteGame = {
+  startOnlineGame: () => startGame({ preventDefault() {} }),
+  getSnapshot: sharedGameSnapshot,
+  applySnapshot: applySharedGameSnapshot,
+  actionOwner: onlineActionOwner,
+  runAction: runOnlineAction,
+  render: () => {
+    render();
+    syncSharedDialogs();
+  },
+  toast,
+};
 
 document.querySelectorAll("[data-player-count]").forEach((button) => button.addEventListener("click", () => {
   state.playerCount = Number(button.dataset.playerCount);
