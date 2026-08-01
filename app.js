@@ -419,6 +419,8 @@ const state = {
   setupNames: [...DEFAULT_NAMES],
   setupCharacters: [...DEFAULT_CHARACTER_IDS],
   activeSetupPlayer: 0,
+  cpuSelectionVersion: 0,
+  normalizedCpuSelectionVersion: -1,
   showingResults: false,
 };
 
@@ -865,6 +867,15 @@ function setupHumanCount() {
   return state.soloMode ? 1 : state.playerCount;
 }
 
+function requestCpuSelection() {
+  state.cpuSelectionVersion += 1;
+}
+
+function randomAvailableProfile(usedCharacters) {
+  const available = CHARACTER_PROFILES.filter((profile) => !usedCharacters.has(profile.id));
+  return available[Math.floor(Math.random() * available.length)] || CHARACTER_PROFILES[0];
+}
+
 function normalizeSetupCharacters() {
   const usedCharacters = new Set();
   const humanCount = setupHumanCount();
@@ -878,12 +889,16 @@ function normalizeSetupCharacters() {
     if (!state.soloMode && state.setupNames[index]?.startsWith("CPU・")) state.setupNames[index] = characterProfile(state.setupCharacters[index]).name;
     usedCharacters.add(state.setupCharacters[index]);
   }
+  const randomizeCpu = state.soloMode && state.cpuSelectionVersion !== state.normalizedCpuSelectionVersion;
   for (let index = humanCount; index < state.playerCount; index += 1) {
-    const replacement = CHARACTER_PROFILES.find((profile) => !usedCharacters.has(profile.id)) || CHARACTER_PROFILES[0];
+    const currentId = state.setupCharacters[index];
+    const canKeepCurrent = !randomizeCpu && currentId && !usedCharacters.has(currentId) && CHARACTER_BY_ID[currentId];
+    const replacement = canKeepCurrent ? CHARACTER_BY_ID[currentId] : randomAvailableProfile(usedCharacters);
     state.setupCharacters[index] = replacement.id;
     state.setupNames[index] = `CPU・${replacement.name}`;
     usedCharacters.add(replacement.id);
   }
+  if (state.soloMode) state.normalizedCpuSelectionVersion = state.cpuSelectionVersion;
 }
 
 function updateEventCatalogStatus(message, tone = "") {
@@ -984,6 +999,7 @@ function openSetup() {
     state.cpuCount = state.soloMode ? Math.max(1, state.players.filter((player) => player.isComputer).length) : 1;
     state.setupNames = Array.from({ length: 4 }, (_, index) => state.players[index]?.name || state.setupNames[index] || DEFAULT_NAMES[index]);
     state.setupCharacters = Array.from({ length: 4 }, (_, index) => state.players[index]?.characterId || state.setupCharacters[index] || DEFAULT_CHARACTER_IDS[index]);
+    if (state.soloMode) requestCpuSelection();
   }
   renderSetup();
   elements.setupModal.classList.remove("is-hidden");
@@ -1732,6 +1748,7 @@ document.querySelectorAll("[data-player-count]").forEach((button) => button.addE
   if (selectedCount === 1) {
     state.soloMode = true;
     state.playerCount = 1 + state.cpuCount;
+    requestCpuSelection();
   } else {
     state.soloMode = false;
     state.playerCount = selectedCount;
@@ -1745,6 +1762,7 @@ elements.soloSettings.addEventListener("click", (event) => {
   state.soloMode = true;
   state.cpuCount = Number(button.dataset.cpuCount);
   state.playerCount = 1 + state.cpuCount;
+  requestCpuSelection();
   state.activeSetupPlayer = 0;
   renderSetup();
 });
