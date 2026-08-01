@@ -375,6 +375,7 @@ const elements = {
   cpuSpeedSettings: document.querySelector("#cpu-speed-settings"),
   cpuOpponentList: document.querySelector("#cpu-opponent-list"),
   eventCatalogStatus: document.querySelector("#event-catalog-status"),
+  localModeNotice: document.querySelector("#local-mode-notice"),
   choiceModal: document.querySelector("#choice-modal"),
   eventModal: document.querySelector("#event-modal"),
   giftModal: document.querySelector("#gift-modal"),
@@ -431,6 +432,7 @@ const state = {
   normalizedCpuSelectionVersion: -1,
   cpuSpeed: "standard",
   setupBusy: false,
+  isInitializing: false,
   showingResults: false,
 };
 
@@ -961,6 +963,7 @@ async function initializeEventCatalog() {
 function renderSetup() {
   normalizeSetupCharacters();
   const humanCount = setupHumanCount();
+  const requiresOnline = !state.soloMode && state.playerCount > 1;
   state.activeSetupPlayer = Math.min(state.activeSetupPlayer, humanCount - 1);
   document.querySelectorAll("[data-player-count]").forEach((button) => {
     const count = Number(button.dataset.playerCount);
@@ -976,6 +979,7 @@ function renderSetup() {
       return `<span class="cpu-opponent">${portraitMarkup(profile, "cpu-opponent-portrait", `コンピュータ${index + 1}：${profile.name}`)}CPU ${index + 1}・${escapeHtml(profile.name)}</span>`;
     }).join("")
     : "";
+  elements.localModeNotice.hidden = !requiresOnline;
   document.querySelectorAll("#online-host-button, #online-join-button").forEach((button) => {
     button.disabled = state.soloMode;
     button.title = state.soloMode ? "オンライン対戦は2〜4人モードで利用できます" : "";
@@ -1023,7 +1027,8 @@ function renderSetup() {
     </label>`;
   }).join("");
   const submitButton = elements.setupForm.querySelector("button[type='submit']");
-  submitButton.disabled = state.setupBusy || !eventCatalogReady;
+  submitButton.hidden = requiresOnline;
+  submitButton.disabled = requiresOnline || state.setupBusy || !eventCatalogReady;
   submitButton.innerHTML = state.setupBusy
     ? `<span class="button-icon" aria-hidden="true">⌁</span>処理中…`
     : eventCatalogReady
@@ -1049,6 +1054,12 @@ function openSetup() {
 function startGame(event) {
   event.preventDefault();
   if (state.setupBusy) return false;
+  const onlineHostCanStart = onlineBridge()?.canStartGame?.() === true;
+  if (!state.isInitializing && !state.soloMode && state.playerCount > 1 && !onlineHostCanStart) {
+    toast("2〜4人プレイはオンライン部屋を作成または参加してください。");
+    renderSetup();
+    return false;
+  }
   if (computerActionTimer !== null) {
     window.clearTimeout(computerActionTimer);
     computerActionTimer = null;
@@ -1913,7 +1924,9 @@ async function initializeGame() {
   if (window.matchMedia(MOBILE_LAYOUT_QUERY).matches) elements.playerDetails.open = false;
   renderSetup();
   await initializeEventCatalog();
+  state.isInitializing = true;
   startGame(new Event("submit"));
+  state.isInitializing = false;
   renderSetup();
   elements.setupModal.classList.remove("is-hidden");
 }

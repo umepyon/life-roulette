@@ -181,6 +181,7 @@ footer { display: flex; justify-content: space-between; padding: 24px 4px calc(3
 .event-catalog-status { margin: -8px 0 17px; color: #777082; font-size: 10px; line-height: 1.45; }
 .event-catalog-status.is-loaded { color: #25866f; }
 .event-catalog-status.is-fallback { color: #aa6d34; }
+.local-mode-notice { margin: -8px 0 17px; padding: 10px 12px; border: 1px solid #f1c777; border-radius: 11px; color: #785722; background: #fff8e8; font-size: 11px; font-weight: 800; line-height: 1.5; }
 
 @media (max-width: 1250px) { .game-layout { grid-template-columns: 225px minmax(440px, 1fr); }.action-panel { display: grid; grid-column: 1 / -1; grid-template-columns: 1.05fr .95fr .7fr 1fr; gap: 16px; align-items: center; }.online-room-panel { grid-column: 1 / -1; margin: 0; }.action-panel .panel-heading, .current-player-card, .event-feed-wrap { margin: 0; padding: 0; border: 0; }.current-player-card { padding: 13px; }.dice { margin: 0 auto; }.roll-hint { display: none; }.event-feed { max-height: 94px; } }
 @media (max-width: 1050px) { .character-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }.character-select-modal { width: min(100%, 780px); }.setup-profile-details { grid-template-columns: 1fr; } }

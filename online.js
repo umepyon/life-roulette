@@ -353,6 +353,7 @@
 
   window.lifeRouletteOnline = {
     canControlPlayer,
+    canStartGame: () => session.connected && session.role === "host" && !session.started,
     isWaiting: () => session.connected && !session.started,
     publishSnapshot,
   };
