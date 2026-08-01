@@ -323,11 +323,13 @@ function buildHexGameCourse(courseSize = state.courseSize) {
       templateIndex += 1;
     }
     spaceById[node.id] = {
+      ...space,
+      // Event catalog rows also have their own `id`; keep the generated
+      // hex-node id so board geometry and movement maps stay in sync.
       id: node.id,
       q: node.q,
       r: node.r,
       next: graph.nextById[node.id],
-      ...space,
     };
   });
 
