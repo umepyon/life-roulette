@@ -290,3 +290,21 @@ footer { display: flex; justify-content: space-between; padding: 24px 4px calc(3
   .board-overview-frame { display: flex; height: 100%; max-height: none; align-items: center; justify-content: center; }
   .board-overview .board-grid { width: auto; max-width: 100%; height: calc(100dvh - 32px); }
 }
+
+.solo-settings[hidden] { display: none; }
+.solo-settings { margin: -7px 0 17px; padding: 12px 13px; border: 1px solid #d8cfff; border-radius: 14px; background: linear-gradient(135deg, #f8f5ff, #eefaff); }
+.solo-settings legend { padding: 0 6px; color: var(--purple-dark); font-size: 11px; font-weight: 900; }
+.cpu-count-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.cpu-count-options button { min-height: 42px; padding: 8px; border: 1px solid #d9d0ea; border-radius: 9px; color: #6b6375; background: white; font-size: 12px; font-weight: 800; }
+.cpu-count-options button:hover, .cpu-count-options button.is-selected { border-color: var(--purple); color: var(--purple-dark); background: #f3eeff; }
+.solo-settings-help { margin: 8px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.5; }
+.cpu-opponent-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.cpu-opponent { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px 4px 4px; border-radius: 999px; color: #574a7f; background: rgba(255, 255, 255, .82); font-size: 10px; font-weight: 800; }
+.cpu-opponent-portrait { width: 24px; border-radius: 50%; }
+.count-picker { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.count-picker button { min-height: 46px; }
+.cpu-badge { padding: 2px 4px; border-radius: 4px; color: #fff; background: #5e6680; font-size: 7px; letter-spacing: .05em; }
+
+@media (max-width: 560px) {
+  .count-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

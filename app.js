@@ -363,6 +363,8 @@ const elements = {
   eventFeed: document.querySelector("#event-feed"),
   setupModal: document.querySelector("#setup-modal"),
   courseSizePicker: document.querySelector("#course-size-picker"),
+  soloSettings: document.querySelector("#solo-settings"),
+  cpuOpponentList: document.querySelector("#cpu-opponent-list"),
   eventCatalogStatus: document.querySelector("#event-catalog-status"),
   choiceModal: document.querySelector("#choice-modal"),
   eventModal: document.querySelector("#event-modal"),
@@ -409,6 +411,8 @@ const state = {
   pendingGoalBonus: null,
   feed: [],
   playerCount: 2,
+  soloMode: false,
+  cpuCount: 1,
   courseSize: "small",
   setupNames: [...DEFAULT_NAMES],
   setupCharacters: [...DEFAULT_CHARACTER_IDS],
@@ -420,7 +424,16 @@ function onlineBridge() {
   return window.lifeRouletteOnline || null;
 }
 
+function playerById(playerId) {
+  return state.players.find((player) => player.id === playerId) || null;
+}
+
+function isComputerPlayer(playerId) {
+  return Boolean(playerById(playerId)?.isComputer);
+}
+
 function canControlPlayer(playerId) {
+  if (isComputerPlayer(playerId)) return false;
   return onlineBridge()?.canControlPlayer?.(playerId) ?? true;
 }
 
@@ -663,7 +676,7 @@ function renderPlayers() {
     <article class="player-card ${index === state.currentIndex && !player.finished ? "is-current" : ""} ${player.finished ? "is-finished" : ""}">
       ${portraitMarkup(characterProfile(player.characterId), "player-avatar", `${player.name}のキャラクター`)}
       <div class="player-info">
-        <div class="player-name"><span class="player-color" style="background:${player.color}"></span>${escapeHtml(player.name)} ${player.finished ? `<span class="finish-badge">GOAL ${player.finishOrder}位</span>` : ""}</div>
+        <div class="player-name"><span class="player-color" style="background:${player.color}"></span>${escapeHtml(player.name)} ${player.isComputer ? `<span class="cpu-badge">CPU</span>` : ""} ${player.finished ? `<span class="finish-badge">GOAL ${player.finishOrder}位</span>` : ""}</div>
         <div class="player-job">夢：${escapeHtml(player.dreamJob)} · ${familySummary(player)}</div>
         <div class="player-remaining">${remainingStepsLabel(player)}</div>
       </div>
@@ -706,6 +719,8 @@ function renderCurrentPlayer() {
   elements.rollButton.innerHTML = state.isBusy ? `<span class="button-icon" aria-hidden="true">⌁</span>人生を進めています` : `<span class="button-icon" aria-hidden="true">✦</span>サイコロを振る`;
   elements.rollHint.textContent = state.isBusy
     ? "オープンカーがマス目を進んでいます…"
+    : player.isComputer
+      ? "コンピュータがサイコロを振ります…"
     : !canRoll
       ? `${player.name}さんの端末でサイコロを振ってください。`
       : next ? `次は「${next.label}」の方向へ。` : "分岐で行き先を選んでください。";
@@ -774,6 +789,61 @@ function render() {
   elements.dice.classList.toggle("rolling", state.isBusy);
   renderFeed();
   publishOnlineState();
+  scheduleComputerTurn();
+}
+
+let computerActionTimer = null;
+
+function computerRouteChoiceIndex(space) {
+  if (!space?.routeOptions?.length) return 0;
+  if (space.label === "結婚・家族") {
+    const familyIndex = space.routeOptions.findIndex((option) => option.title.includes("家族") || option.title.includes("結婚"));
+    if (familyIndex >= 0) return familyIndex;
+  }
+  return Math.floor(Math.random() * space.routeOptions.length);
+}
+
+function scheduleComputerTurn(delay = 650) {
+  const hasPendingComputerDialog = state.pendingEvent || state.pendingChoice || state.pendingGift || state.pendingGoalBonus;
+  if (!state.soloMode || state.showingResults || (state.isBusy && !hasPendingComputerDialog)) return;
+  const pendingPlayerId = state.pendingEvent?.playerId
+    ?? state.pendingChoice?.playerId
+    ?? (state.pendingGift ? currentGiftPayer()?.id : null)
+    ?? state.pendingGoalBonus?.playerId
+    ?? currentPlayer()?.id;
+  if (!isComputerPlayer(pendingPlayerId)) return;
+  if (computerActionTimer !== null) return;
+  computerActionTimer = window.setTimeout(() => {
+    computerActionTimer = null;
+    runComputerAction();
+  }, delay);
+}
+
+function runComputerAction() {
+  if (!state.soloMode || state.showingResults) return;
+  const pendingEvent = state.pendingEvent;
+  if (pendingEvent && isComputerPlayer(pendingEvent.playerId)) {
+    continueAfterLifeEvent();
+    return;
+  }
+  const pendingChoice = state.pendingChoice;
+  if (pendingChoice && isComputerPlayer(pendingChoice.playerId)) {
+    const space = activeSpaceById(pendingChoice.spaceId);
+    chooseOption(computerRouteChoiceIndex(space));
+    return;
+  }
+  const pendingGift = state.pendingGift;
+  if (pendingGift && isComputerPlayer(currentGiftPayer()?.id)) {
+    continueGiftCollection();
+    return;
+  }
+  const pendingGoalBonus = state.pendingGoalBonus;
+  if (pendingGoalBonus && isComputerPlayer(pendingGoalBonus.playerId)) {
+    continueGoalBonus();
+    return;
+  }
+  const player = currentPlayer();
+  if (player?.isComputer && !state.isBusy && !player.finished) rollDice();
 }
 
 function addFeed(text, tone = "") {
@@ -789,16 +859,28 @@ function toast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("is-visible"), 2600);
 }
 
+function setupHumanCount() {
+  return state.soloMode ? 1 : state.playerCount;
+}
+
 function normalizeSetupCharacters() {
   const usedCharacters = new Set();
-  for (let index = 0; index < state.playerCount; index += 1) {
+  const humanCount = setupHumanCount();
+  for (let index = 0; index < humanCount; index += 1) {
     const previousProfile = characterProfile(state.setupCharacters[index]);
     if (!state.setupCharacters[index] || usedCharacters.has(state.setupCharacters[index])) {
       const replacement = CHARACTER_PROFILES.find((profile) => !usedCharacters.has(profile.id));
       state.setupCharacters[index] = replacement.id;
       if (state.setupNames[index] === previousProfile.name) state.setupNames[index] = replacement.name;
     }
+    if (!state.soloMode && state.setupNames[index]?.startsWith("CPU・")) state.setupNames[index] = characterProfile(state.setupCharacters[index]).name;
     usedCharacters.add(state.setupCharacters[index]);
+  }
+  for (let index = humanCount; index < state.playerCount; index += 1) {
+    const replacement = CHARACTER_PROFILES.find((profile) => !usedCharacters.has(profile.id)) || CHARACTER_PROFILES[0];
+    state.setupCharacters[index] = replacement.id;
+    state.setupNames[index] = `CPU・${replacement.name}`;
+    usedCharacters.add(replacement.id);
   }
 }
 
@@ -829,12 +911,28 @@ async function initializeEventCatalog() {
 
 function renderSetup() {
   normalizeSetupCharacters();
-  state.activeSetupPlayer = Math.min(state.activeSetupPlayer, state.playerCount - 1);
-  document.querySelectorAll("[data-player-count]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.playerCount) === state.playerCount));
+  const humanCount = setupHumanCount();
+  state.activeSetupPlayer = Math.min(state.activeSetupPlayer, humanCount - 1);
+  document.querySelectorAll("[data-player-count]").forEach((button) => {
+    const count = Number(button.dataset.playerCount);
+    button.classList.toggle("is-selected", state.soloMode ? count === 1 : count === state.playerCount);
+  });
+  elements.soloSettings.hidden = !state.soloMode;
+  elements.soloSettings.querySelectorAll("[data-cpu-count]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.cpuCount) === state.cpuCount));
+  elements.cpuOpponentList.innerHTML = state.soloMode
+    ? state.setupCharacters.slice(1, state.playerCount).map((characterId, index) => {
+      const profile = characterProfile(characterId);
+      return `<span class="cpu-opponent">${portraitMarkup(profile, "cpu-opponent-portrait", `コンピュータ${index + 1}：${profile.name}`)}CPU ${index + 1}・${escapeHtml(profile.name)}</span>`;
+    }).join("")
+    : "";
+  document.querySelectorAll("#online-host-button, #online-join-button").forEach((button) => {
+    button.disabled = state.soloMode;
+    button.title = state.soloMode ? "オンライン対戦は2〜4人モードで利用できます" : "";
+  });
   elements.courseSizePicker.querySelectorAll("input[name='course-size']").forEach((input) => {
     input.checked = input.value === state.courseSize;
   });
-  elements.setupPlayerTabs.innerHTML = Array.from({ length: state.playerCount }, (_, index) => {
+  elements.setupPlayerTabs.innerHTML = Array.from({ length: humanCount }, (_, index) => {
     const profile = characterProfile(state.setupCharacters[index]);
     return `<button class="setup-player-tab ${index === state.activeSetupPlayer ? "is-active" : ""}" type="button" data-setup-player="${index}" aria-pressed="${index === state.activeSetupPlayer}">
       ${portraitMarkup(profile, "setup-tab-avatar", `${index + 1}人目：${state.setupNames[index]}`)}
@@ -861,6 +959,7 @@ function renderSetup() {
     const assignedPlayer = state.setupCharacters.slice(0, state.playerCount).findIndex((characterId) => characterId === profile.id);
     const isCurrent = profile.id === activeProfile.id;
     const isTaken = assignedPlayer !== -1 && assignedPlayer !== activeIndex;
+    const takenLabel = state.soloMode && assignedPlayer > 0 ? `CPU ${assignedPlayer}` : `PLAYER ${assignedPlayer + 1}`;
     return `<label class="character-card ${isCurrent ? "is-selected" : ""} ${isTaken ? "is-taken" : ""}" for="character-${profile.id}">
       <input class="character-radio" id="character-${profile.id}" type="radio" name="character-selection" value="${profile.id}" ${isCurrent ? "checked" : ""} ${isTaken ? "disabled" : ""} />
       ${portraitMarkup(profile, "character-card-portrait")}
@@ -869,7 +968,7 @@ function renderSetup() {
         <span><b>趣味</b>${escapeHtml(profile.hobby)}</span>
         <span><b>夢</b>${escapeHtml(profile.dreamJob)}</span>
       </span>
-      ${isTaken ? `<span class="character-taken">PLAYER ${assignedPlayer + 1}</span>` : ""}
+      ${isTaken ? `<span class="character-taken">${takenLabel}</span>` : ""}
     </label>`;
   }).join("");
 }
@@ -879,6 +978,8 @@ function openSetup() {
   state.playerCount = state.players.length || state.playerCount;
   state.activeSetupPlayer = 0;
   if (state.players.length) {
+    state.soloMode = state.players.some((player) => player.isComputer);
+    state.cpuCount = state.soloMode ? Math.max(1, state.players.filter((player) => player.isComputer).length) : 1;
     state.setupNames = Array.from({ length: 4 }, (_, index) => state.players[index]?.name || state.setupNames[index] || DEFAULT_NAMES[index]);
     state.setupCharacters = Array.from({ length: 4 }, (_, index) => state.players[index]?.characterId || state.setupCharacters[index] || DEFAULT_CHARACTER_IDS[index]);
   }
@@ -888,6 +989,10 @@ function openSetup() {
 
 function startGame(event) {
   event.preventDefault();
+  if (computerActionTimer !== null) {
+    window.clearTimeout(computerActionTimer);
+    computerActionTimer = null;
+  }
   if (!eventCatalogReady) {
     toast("イベントCSVを読み込み中です。少し待ってください。");
     return false;
@@ -905,7 +1010,7 @@ function startGame(event) {
   state.players = names.map((name, index) => {
     const profile = characterProfile(state.setupCharacters[index]);
     return {
-      id: index, name, characterId: profile.id, hobby: profile.hobby, dreamJob: profile.dreamJob, color: PLAYER_COLORS[index].value,
+      id: index, name, isComputer: state.soloMode && index > 0, characterId: profile.id, hobby: profile.hobby, dreamJob: profile.dreamJob, color: PLAYER_COLORS[index].value,
       cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, spaceId: activeCourse().startId, steps: 0,
       routes: {}, pathHistory: [activeCourse().startId], skipTurns: 0, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
     };
@@ -1129,6 +1234,7 @@ function openLifeEvent(player, { scene, title, amount, amountLabel = "", amountT
   };
   renderLifeEvent();
   publishOnlineState();
+  scheduleComputerTurn(850);
   return true;
 }
 
@@ -1193,6 +1299,7 @@ function startGiftCollection(recipientId, { celebration }, resumeSteps = null) {
   renderGiftCollection();
   elements.giftModal.classList.remove("is-hidden");
   publishOnlineState();
+  scheduleComputerTurn(850);
 }
 
 function currentGiftPayer() {
@@ -1310,6 +1417,7 @@ function startGoalBonus(player) {
   renderGoalBonus();
   elements.goalBonusModal.classList.remove("is-hidden");
   publishOnlineState();
+  scheduleComputerTurn(850);
 }
 
 function renderGoalBonus() {
@@ -1440,6 +1548,7 @@ function openRouteChoice(player, space) {
   state.pendingChoice = { type: "route", playerId: player.id, spaceId: space.id, options: space.routeOptions };
   renderRouteChoice();
   publishOnlineState();
+  scheduleComputerTurn(850);
 }
 
 function renderRouteChoice() {
@@ -1517,6 +1626,10 @@ function renderResults() {
 }
 
 function endGame() {
+  if (computerActionTimer !== null) {
+    window.clearTimeout(computerActionTimer);
+    computerActionTimer = null;
+  }
   state.players = [];
   state.currentIndex = 0;
   state.dice = 1;
@@ -1545,6 +1658,7 @@ function sharedGameSnapshot() {
     pendingGoalBonus: state.pendingGoalBonus,
     feed: state.feed,
     playerCount: state.playerCount,
+    soloMode: state.soloMode,
     showingResults: state.showingResults,
   };
   return JSON.parse(JSON.stringify(snapshot));
@@ -1571,7 +1685,7 @@ function syncSharedDialogs() {
 
 function applySharedGameSnapshot(snapshot) {
   if (!snapshot || !Array.isArray(snapshot.players) || !snapshot.course) return;
-  ["course", "players", "currentIndex", "dice", "isBusy", "pendingChoice", "pendingEvent", "pendingGift", "pendingGoalBonus", "feed", "playerCount", "showingResults"].forEach((key) => {
+  ["course", "players", "currentIndex", "dice", "isBusy", "pendingChoice", "pendingEvent", "pendingGift", "pendingGoalBonus", "feed", "playerCount", "soloMode", "showingResults"].forEach((key) => {
     if (key in snapshot) state[key] = snapshot[key];
   });
   elements.setupModal.classList.add("is-hidden");
@@ -1611,9 +1725,26 @@ window.lifeRouletteGame = {
 };
 
 document.querySelectorAll("[data-player-count]").forEach((button) => button.addEventListener("click", () => {
-  state.playerCount = Number(button.dataset.playerCount);
+  const selectedCount = Number(button.dataset.playerCount);
+  if (selectedCount === 1) {
+    state.soloMode = true;
+    state.playerCount = 1 + state.cpuCount;
+  } else {
+    state.soloMode = false;
+    state.playerCount = selectedCount;
+  }
+  state.activeSetupPlayer = 0;
   renderSetup();
 }));
+elements.soloSettings.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-cpu-count]");
+  if (!button) return;
+  state.soloMode = true;
+  state.cpuCount = Number(button.dataset.cpuCount);
+  state.playerCount = 1 + state.cpuCount;
+  state.activeSetupPlayer = 0;
+  renderSetup();
+});
 elements.courseSizePicker.addEventListener("change", (event) => {
   if (!event.target.matches("input[name='course-size']")) return;
   state.courseSize = event.target.value;

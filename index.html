@@ -116,12 +116,23 @@
         <button class="modal-close" id="setup-close" type="button" aria-label="設定画面を閉じる">×</button>
         <div class="modal-kicker">LIFE STARTER KIT</div>
         <h2 id="setup-title">人生の主人公を選ぼう</h2>
-        <p class="modal-lead">同じ画面を囲んで、2〜4人で遊べます。プレイヤーごとにキャラクターを選んでください。</p>
+        <p class="modal-lead">ひとりでコンピュータと対戦するか、同じ画面を囲んで2〜4人で遊べます。</p>
         <div class="count-picker" aria-label="プレイ人数を選ぶ">
+          <button type="button" data-player-count="1">ひとり＋CPU</button>
           <button type="button" data-player-count="2">2人</button>
           <button type="button" data-player-count="3">3人</button>
           <button type="button" data-player-count="4">4人</button>
         </div>
+        <fieldset class="solo-settings" id="solo-settings" hidden>
+          <legend>対戦するコンピュータの数</legend>
+          <div class="cpu-count-options">
+            <button type="button" data-cpu-count="1">1台</button>
+            <button type="button" data-cpu-count="2">2台</button>
+            <button type="button" data-cpu-count="3">3台</button>
+          </div>
+          <p class="solo-settings-help">あなたが選んだキャラクター以外から、コンピュータが自動で選ばれます。</p>
+          <div id="cpu-opponent-list" class="cpu-opponent-list" aria-live="polite"></div>
+        </fieldset>
         <fieldset class="course-size-picker" id="course-size-picker">
           <legend>コースの大きさ</legend>
           <div class="course-size-options">

@@ -3,6 +3,7 @@
 ## プロジェクト概要
 
 - HTML / CSS / JavaScript による、同一画面またはオンラインで2〜4人が遊ぶ人生すごろく。オンライン部屋のみ Supabase JavaScript CDN を利用する。
+- ローカル対戦では1人＋CPU1〜3台のひとり用モードにも対応する。CPUは人間が選んだ人物以外から自動選択し、サイコロ・分岐・イベント・ご祝儀・ゴール後の運命サイコロを自動進行する。
 - 公開先は GitHub Pages: <https://umepyon.github.io/life-roulette/>
 - Nintendo や他社ゲームのキャラクター、ロゴ、素材を使わない。画像・演出はオリジナルで作る。
 
