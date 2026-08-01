@@ -1377,6 +1377,7 @@ function continueGiftCollection() {
     gift.lastResult = null;
     renderGiftCollection();
     publishOnlineState();
+    scheduleComputerTurn(850);
     return;
   }
   const recipient = state.players.find((player) => player.id === gift.recipientId);
