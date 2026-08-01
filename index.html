@@ -33,6 +33,7 @@
           <div class="mobile-game-menu" id="mobile-game-menu" hidden>
             <button id="mobile-new-game-button" type="button"><span aria-hidden="true">✦</span>新しいゲーム</button>
             <button id="board-overview-button" type="button"><span aria-hidden="true">⌗</span>ボード全体を表示</button>
+            <button id="mobile-help-button" type="button"><span aria-hidden="true">?</span>遊び方・特殊ルール</button>
           </div>
         </div>
       </header>
@@ -133,6 +134,15 @@
           <p class="solo-settings-help">あなたが選んだキャラクター以外から、コンピュータが自動で選ばれます。</p>
           <div id="cpu-opponent-list" class="cpu-opponent-list" aria-live="polite"></div>
         </fieldset>
+        <fieldset class="cpu-speed-settings" id="cpu-speed-settings" hidden>
+          <legend>CPUの進行速度</legend>
+          <div class="cpu-speed-options">
+            <button type="button" data-cpu-speed="standard">標準</button>
+            <button type="button" data-cpu-speed="fast">高速</button>
+            <button type="button" data-cpu-speed="instant">演出なし</button>
+          </div>
+          <p class="cpu-speed-help">サイコロの結果や金額は変わらず、待ち時間だけが変わります。</p>
+        </fieldset>
         <fieldset class="course-size-picker" id="course-size-picker">
           <legend>コースの大きさ</legend>
           <div class="course-size-options">
@@ -213,6 +223,7 @@
         <p id="gift-rule" class="gift-rule">1→1万円 / 2→2万円 / 3→3万円 / 4→5万円 / 5→7万円 / 6→10万円<br />※4万円は使いません</p>
         <div id="gift-dice" class="gift-dice" aria-label="ご祝儀用サイコロの目" aria-live="polite"></div>
         <p id="gift-result" class="gift-result" aria-live="polite"></p>
+        <ul id="gift-summary" class="gift-summary" aria-label="ご祝儀の一覧"></ul>
         <button id="gift-roll" class="start-button" type="button">サイコロを振る <span aria-hidden="true">🎲</span></button>
       </section>
     </div>
@@ -259,12 +270,23 @@
         <p class="modal-kicker">HOW TO PLAY</p>
         <h2 id="help-title">遊び方はかんたん</h2>
         <ol class="how-to-list">
-          <li><span>1</span><p><strong>人数と名前を決める</strong><br />2〜4人で順番に遊びます。</p></li>
+          <li><span>1</span><p><strong>人数と名前を決める</strong><br />ひとり＋CPU1〜3台、または2〜4人で遊びます。</p></li>
           <li><span>2</span><p><strong>サイコロを振って進む</strong><br />止まったマスの出来事があなたの人生に。</p></li>
           <li><span>3</span><p><strong>分岐でルートを選ぶ</strong><br />赤い分岐マスで、次に進む道を自分で決めます。</p></li>
           <li><span>4</span><p><strong>家族が増えると車もにぎやかに</strong><br />結婚・子ども誕生のマスで、オープンカーの人形が増えます。</p></li>
           <li><span>5</span><p><strong>全員ゴールで資産を比較</strong><br />いちばんお金を残した人の勝ちです。</p></li>
         </ol>
+        <section class="help-rules" aria-labelledby="help-rules-title">
+          <h3 id="help-rules-title">先に知っておきたい特殊ルール</h3>
+          <ul>
+            <li>所持金はマイナスになります。支払いで0円には止まりません。</li>
+            <li>ゴール順と最終順位は別です。最終順位はゴール時の所持金・資産で決まります。</li>
+            <li>ゴール後にも運命サイコロがあります。出目1はカジノで1,000万円を失います。</li>
+            <li>ゴール直前でも「スタートに戻る」に止まることがあります。</li>
+            <li>スタートに戻ったら、所持金だけを引き継いで人生を最初からやり直します。</li>
+            <li>ほかの全員がゴールすると、残ったプレイヤーは自動的にビリでゴールします。</li>
+          </ul>
+        </section>
       </section>
     </div>
 

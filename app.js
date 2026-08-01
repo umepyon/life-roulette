@@ -32,6 +32,11 @@ const GOAL_ID = "goal";
 const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
 const CASINO_LOSS_AMOUNT = -10000000;
 const MOBILE_LAYOUT_QUERY = "(max-width: 760px), (max-width: 900px) and (max-height: 500px)";
+const CPU_SPEEDS = {
+  standard: { turn: 650, dialog: 850, roll: 520, step: 190, mobileStep: 330, result: 520 },
+  fast: { turn: 220, dialog: 220, roll: 180, step: 85, mobileStep: 145, result: 180 },
+  instant: { turn: 35, dialog: 35, roll: 0, step: 0, mobileStep: 0, result: 0 },
+};
 
 const LEGACY_SPACES = [
   { id: "start", label: "START", sub: "出発", icon: "🏁", type: "start", grid: [11, 1], next: "first-payday" },
@@ -356,6 +361,7 @@ const elements = {
   mobileMenuButton: document.querySelector("#mobile-menu-button"),
   mobileGameMenu: document.querySelector("#mobile-game-menu"),
   mobileNewGameButton: document.querySelector("#mobile-new-game-button"),
+  mobileHelpButton: document.querySelector("#mobile-help-button"),
   boardOverviewButton: document.querySelector("#board-overview-button"),
   boardOverviewModal: document.querySelector("#board-overview-modal"),
   boardOverview: document.querySelector("#board-overview"),
@@ -366,6 +372,7 @@ const elements = {
   setupModal: document.querySelector("#setup-modal"),
   courseSizePicker: document.querySelector("#course-size-picker"),
   soloSettings: document.querySelector("#solo-settings"),
+  cpuSpeedSettings: document.querySelector("#cpu-speed-settings"),
   cpuOpponentList: document.querySelector("#cpu-opponent-list"),
   eventCatalogStatus: document.querySelector("#event-catalog-status"),
   choiceModal: document.querySelector("#choice-modal"),
@@ -391,6 +398,7 @@ const elements = {
   giftDescription: document.querySelector("#gift-description"),
   giftDice: document.querySelector("#gift-dice"),
   giftResult: document.querySelector("#gift-result"),
+  giftSummary: document.querySelector("#gift-summary"),
   giftRoll: document.querySelector("#gift-roll"),
   goalBonusTitle: document.querySelector("#goal-bonus-title"),
   goalBonusDescription: document.querySelector("#goal-bonus-description"),
@@ -421,6 +429,8 @@ const state = {
   activeSetupPlayer: 0,
   cpuSelectionVersion: 0,
   normalizedCpuSelectionVersion: -1,
+  cpuSpeed: "standard",
+  setupBusy: false,
   showingResults: false,
 };
 
@@ -439,6 +449,11 @@ function isComputerPlayer(playerId) {
 function canControlPlayer(playerId) {
   if (isComputerPlayer(playerId)) return false;
   return onlineBridge()?.canControlPlayer?.(playerId) ?? true;
+}
+
+function cpuTiming(kind, fallback, playerId = currentPlayer()?.id) {
+  if (!state.soloMode || !isComputerPlayer(playerId)) return fallback;
+  return CPU_SPEEDS[state.cpuSpeed]?.[kind] ?? fallback;
 }
 
 function publishOnlineState() {
@@ -718,11 +733,14 @@ function renderCurrentPlayer() {
   const seedBadge = course.seed ? `<span class="course-seed" title="同じシードなら同じヘックスコースになります">${escapeHtml(course.sizeLabel || "ヘックスコース")} · HEX #${course.seed}</span>` : "";
   elements.turnBanner.innerHTML = `<span class="turn-color" style="background:${player.color}"></span><strong>${escapeHtml(player.name)}</strong> の番です。${space.routeOptions ? "進路を決めて、次の人生へ。" : "運命のサイコロを振ろう。"}${seedBadge}`;
   const canRoll = canControlPlayer(player.id);
+  const onlineWaiting = onlineBridge()?.isWaiting?.() ?? false;
   elements.rollButton.disabled = state.isBusy || player.finished || !canRoll;
   elements.rollButton.setAttribute("aria-label", `${player.name}さんのサイコロを振る`);
   elements.rollButton.innerHTML = state.isBusy ? `<span class="button-icon" aria-hidden="true">⌁</span>人生を進めています` : `<span class="button-icon" aria-hidden="true">✦</span>サイコロを振る`;
   elements.rollHint.textContent = state.isBusy
     ? "オープンカーがマス目を進んでいます…"
+    : onlineWaiting
+      ? "参加者が揃うまで、ホストの開始を待っています…"
     : player.isComputer
       ? "コンピュータがサイコロを振ります…"
     : !canRoll
@@ -807,7 +825,7 @@ function computerRouteChoiceIndex(space) {
   return Math.floor(Math.random() * space.routeOptions.length);
 }
 
-function scheduleComputerTurn(delay = 650) {
+function scheduleComputerTurn(kind = "turn") {
   const hasPendingComputerDialog = state.pendingEvent || state.pendingChoice || state.pendingGift || state.pendingGoalBonus;
   if (!state.soloMode || state.showingResults || (state.isBusy && !hasPendingComputerDialog)) return;
   const pendingPlayerId = state.pendingEvent?.playerId
@@ -817,6 +835,8 @@ function scheduleComputerTurn(delay = 650) {
     ?? currentPlayer()?.id;
   if (!isComputerPlayer(pendingPlayerId)) return;
   if (computerActionTimer !== null) return;
+  const fallback = kind === "dialog" ? 850 : 650;
+  const delay = cpuTiming(kind, fallback, pendingPlayerId);
   computerActionTimer = window.setTimeout(() => {
     computerActionTimer = null;
     runComputerAction();
@@ -912,9 +932,20 @@ async function initializeEventCatalog() {
   if (!api?.loadEventCatalog) {
     eventCatalogReady = true;
     updateEventCatalogStatus("標準イベントを使用中です。", "is-fallback");
+    renderSetup();
     return;
   }
-  const result = await api.loadEventCatalog("data/events.csv");
+  let result;
+  try {
+    result = await api.loadEventCatalog("data/events.csv");
+  } catch (error) {
+    console.warn("イベントCSVの読み込み中にエラーが発生しました。標準イベントを使用します。", error);
+    eventCatalog = FALLBACK_EVENT_CATALOG;
+    eventCatalogReady = true;
+    updateEventCatalogStatus("イベントCSVの読み込みに失敗したため標準イベントを使用中です。", "is-fallback");
+    renderSetup();
+    return;
+  }
   if (result.ok) {
     eventCatalog = { ...result, source: "csv" };
     updateEventCatalogStatus(`管理者CSVを読み込みました（${result.rows.length}件）。`, "is-loaded");
@@ -924,6 +955,7 @@ async function initializeEventCatalog() {
     updateEventCatalogStatus("イベントCSVを読み込めないため標準イベントを使用中です。", "is-fallback");
   }
   eventCatalogReady = true;
+  renderSetup();
 }
 
 function renderSetup() {
@@ -936,6 +968,8 @@ function renderSetup() {
   });
   elements.soloSettings.hidden = !state.soloMode;
   elements.soloSettings.querySelectorAll("[data-cpu-count]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.cpuCount) === state.cpuCount));
+  elements.cpuSpeedSettings.hidden = !state.soloMode;
+  elements.cpuSpeedSettings.querySelectorAll("[data-cpu-speed]").forEach((button) => button.classList.toggle("is-selected", button.dataset.cpuSpeed === state.cpuSpeed));
   elements.cpuOpponentList.innerHTML = state.soloMode
     ? state.setupCharacters.slice(1, state.playerCount).map((characterId, index) => {
       const profile = characterProfile(characterId);
@@ -988,6 +1022,13 @@ function renderSetup() {
       ${isTaken ? `<span class="character-taken">${takenLabel}</span>` : ""}
     </label>`;
   }).join("");
+  const submitButton = elements.setupForm.querySelector("button[type='submit']");
+  submitButton.disabled = state.setupBusy || !eventCatalogReady;
+  submitButton.innerHTML = state.setupBusy
+    ? `<span class="button-icon" aria-hidden="true">⌁</span>処理中…`
+    : eventCatalogReady
+      ? `この人生をはじめる <span aria-hidden="true">→</span>`
+      : `<span class="button-icon" aria-hidden="true">⌁</span>データを読み込み中…`;
 }
 
 function openSetup() {
@@ -1007,6 +1048,7 @@ function openSetup() {
 
 function startGame(event) {
   event.preventDefault();
+  if (state.setupBusy) return false;
   if (computerActionTimer !== null) {
     window.clearTimeout(computerActionTimer);
     computerActionTimer = null;
@@ -1015,6 +1057,8 @@ function startGame(event) {
     toast("イベントCSVを読み込み中です。少し待ってください。");
     return false;
   }
+  state.setupBusy = true;
+  renderSetup();
   const activeName = elements.nameFields.querySelector("#active-player-name");
   if (activeName) state.setupNames[state.activeSetupPlayer] = activeName.value.trim() || characterProfile(state.setupCharacters[state.activeSetupPlayer]).name;
   const names = Array.from({ length: state.playerCount }, (_, index) => state.setupNames[index].trim() || characterProfile(state.setupCharacters[index]).name);
@@ -1051,6 +1095,7 @@ function startGame(event) {
   elements.eventModal.classList.add("is-hidden");
   elements.giftModal.classList.add("is-hidden");
   elements.goalBonusModal.classList.add("is-hidden");
+  state.setupBusy = false;
   render();
   toast("ゲームをはじめます。最初のサイコロをどうぞ！");
   return true;
@@ -1067,11 +1112,14 @@ function rollDice() {
   state.dice = Math.floor(Math.random() * 6) + 1;
   addFeed(`${player.name}がサイコロを振った。${state.dice}マス進む！`, "choice-dot");
   render();
-  window.setTimeout(() => moveStep(state.dice), 520);
+  window.setTimeout(() => moveStep(state.dice), cpuTiming("roll", 520, player.id));
 }
 
 function movementStepDelay() {
-  return window.matchMedia(MOBILE_LAYOUT_QUERY).matches ? 330 : 190;
+  const mobile = window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
+  const player = currentPlayer();
+  if (state.soloMode && player?.isComputer) return mobile ? CPU_SPEEDS[state.cpuSpeed].mobileStep : CPU_SPEEDS[state.cpuSpeed].step;
+  return mobile ? 330 : 190;
 }
 
 function moveStep(remaining) {
@@ -1110,10 +1158,19 @@ function movePlayerBack(player, spaces) {
 
 function resetPlayerToStart(player) {
   const startId = activeCourse().startId;
+  const profile = characterProfile(player.characterId);
   player.spaceId = startId;
   player.steps = 0;
   player.routes = {};
   player.pathHistory = [startId];
+  player.salary = 30000;
+  player.job = `夢：${profile.dreamJob}`;
+  player.skipTurns = 0;
+  player.partner = false;
+  player.children = 0;
+  player.familyMilestones = [];
+  player.finished = false;
+  player.finishOrder = null;
 }
 
 function leadingOpponent(player) {
@@ -1173,7 +1230,7 @@ function resolveSpecialSpace(player, space) {
     render();
     return openLifeEvent(player, {
       scene: "card", title: space.label, amount: 0, amountLabel: `所持金 ${money(previousCash)} → ${money(player.cash)}`, amountTone: "is-neutral", icon: space.icon,
-      description: `${player.name}はゴール目前でSTARTに戻ります。所持金は半分になりました。`,
+      description: `${player.name}は所持金を引き継いで、人生を最初からやり直します。所持金は半分になりました。`,
     });
   }
 
@@ -1252,7 +1309,7 @@ function openLifeEvent(player, { scene, title, amount, amountLabel = "", amountT
   };
   renderLifeEvent();
   publishOnlineState();
-  scheduleComputerTurn(850);
+  scheduleComputerTurn("dialog");
   return true;
 }
 
@@ -1277,6 +1334,7 @@ function renderLifeEvent() {
 function continueAfterLifeEvent() {
   const pendingEvent = state.pendingEvent;
   if (!pendingEvent) return;
+  elements.eventContinue.disabled = true;
   state.pendingEvent = null;
   elements.eventModal.classList.add("is-hidden");
   publishOnlineState();
@@ -1313,11 +1371,12 @@ function startGiftCollection(recipientId, { celebration }, resumeSteps = null) {
     lastResult: null,
     resumeSteps,
     total: 0,
+    payments: [],
   };
   renderGiftCollection();
   elements.giftModal.classList.remove("is-hidden");
   publishOnlineState();
-  scheduleComputerTurn(850);
+  scheduleComputerTurn("dialog");
 }
 
 function currentGiftPayer() {
@@ -1342,6 +1401,10 @@ function renderGiftCollection() {
   elements.giftResult.textContent = isResult
     ? `出目 ${result.roll}：${money(result.paid)} を渡しました`
     : `ご祝儀の金額はサイコロで決まります。${nextPayer ? `次は${nextPayer.name}さんも振ります。` : ""}`;
+  const payments = Array.isArray(gift.payments) ? gift.payments : [];
+  elements.giftSummary.innerHTML = payments.length
+    ? `${payments.map((payment) => `<li><span>${escapeHtml(payment.name)}</span><strong>${money(payment.paid)}</strong></li>`).join("")}<li class="gift-summary-total"><span>現在の合計</span><strong>${money(gift.total)}</strong></li>`
+    : `<li class="gift-summary-empty">まだご祝儀はありません。</li>`;
   elements.giftRoll.disabled = gift.phase === "rolling" || !canControlPlayer(payer.id);
   elements.giftRoll.setAttribute("aria-label", isResult ? "次のご祝儀へ進む" : `${payer.name}さんがご祝儀のサイコロを振る`);
   elements.giftRoll.innerHTML = gift.phase === "rolling"
@@ -1359,7 +1422,7 @@ function rollGiftDice() {
   gift.lastResult = { roll: Math.floor(Math.random() * 6) + 1 };
   renderGiftCollection();
   publishOnlineState();
-  window.setTimeout(settleGiftDice, 520);
+  window.setTimeout(settleGiftDice, cpuTiming("result", 520, payer.id));
 }
 
 function settleGiftDice() {
@@ -1373,6 +1436,8 @@ function settleGiftDice() {
   changeMoney(recipient, paid);
   gift.total += paid;
   gift.lastResult = { ...gift.lastResult, requested, paid };
+  gift.payments = Array.isArray(gift.payments) ? gift.payments : [];
+  gift.payments.push({ name: payer.name, paid, roll: gift.lastResult.roll });
   gift.phase = "result";
   addFeed(`${payer.name}は${recipient.name}にご祝儀 ${money(paid)} を渡した（出目 ${gift.lastResult.roll}）。`, "negative");
   render();
@@ -1387,13 +1452,14 @@ function continueGiftCollection() {
     return;
   }
   if (gift.phase !== "result") return;
+  elements.giftRoll.disabled = true;
   if (gift.payerIndex + 1 < gift.payerIds.length) {
     gift.payerIndex += 1;
     gift.phase = "prompt";
     gift.lastResult = null;
     renderGiftCollection();
     publishOnlineState();
-    scheduleComputerTurn(850);
+    scheduleComputerTurn("dialog");
     return;
   }
   const recipient = state.players.find((player) => player.id === gift.recipientId);
@@ -1436,7 +1502,7 @@ function startGoalBonus(player) {
   renderGoalBonus();
   elements.goalBonusModal.classList.remove("is-hidden");
   publishOnlineState();
-  scheduleComputerTurn(850);
+  scheduleComputerTurn("dialog");
 }
 
 function renderGoalBonus() {
@@ -1469,7 +1535,7 @@ function rollGoalBonus() {
   bonus.roll = Math.floor(Math.random() * 6) + 1;
   renderGoalBonus();
   publishOnlineState();
-  window.setTimeout(settleGoalBonus, 520);
+  window.setTimeout(settleGoalBonus, cpuTiming("result", 520, player.id));
 }
 
 function settleGoalBonus() {
@@ -1494,6 +1560,7 @@ function continueGoalBonus() {
     return;
   }
   if (bonus.phase !== "result") return;
+  elements.goalBonusRoll.disabled = true;
   const player = state.players.find((entry) => entry.id === bonus.playerId);
   const amount = bonus.amount;
   state.pendingGoalBonus = null;
@@ -1567,7 +1634,7 @@ function openRouteChoice(player, space) {
   state.pendingChoice = { type: "route", playerId: player.id, spaceId: space.id, options: space.routeOptions };
   renderRouteChoice();
   publishOnlineState();
-  scheduleComputerTurn(850);
+  scheduleComputerTurn("dialog");
 }
 
 function renderRouteChoice() {
@@ -1766,6 +1833,12 @@ elements.soloSettings.addEventListener("click", (event) => {
   state.activeSetupPlayer = 0;
   renderSetup();
 });
+elements.cpuSpeedSettings.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-cpu-speed]");
+  if (!button || !CPU_SPEEDS[button.dataset.cpuSpeed]) return;
+  state.cpuSpeed = button.dataset.cpuSpeed;
+  renderSetup();
+});
 elements.courseSizePicker.addEventListener("change", (event) => {
   if (!event.target.matches("input[name='course-size']")) return;
   state.courseSize = event.target.value;
@@ -1809,6 +1882,10 @@ elements.boardOverviewClose.addEventListener("click", closeBoardOverview);
 document.querySelector("#play-again-button").addEventListener("click", openSetup);
 document.querySelector("#quit-game-button").addEventListener("click", endGame);
 document.querySelector("#help-button").addEventListener("click", () => elements.helpModal.classList.remove("is-hidden"));
+elements.mobileHelpButton.addEventListener("click", () => {
+  closeMobileGameMenu();
+  elements.helpModal.classList.remove("is-hidden");
+});
 document.querySelector("#help-close").addEventListener("click", () => elements.helpModal.classList.add("is-hidden"));
 document.querySelector("#setup-close").addEventListener("click", () => { if (state.players.length) elements.setupModal.classList.add("is-hidden"); });
 elements.choiceOptions.addEventListener("click", (event) => { const option = event.target.closest("[data-choice-option]"); if (option) chooseOption(Number(option.dataset.choiceOption)); });
@@ -1837,6 +1914,7 @@ async function initializeGame() {
   renderSetup();
   await initializeEventCatalog();
   startGame(new Event("submit"));
+  renderSetup();
   elements.setupModal.classList.remove("is-hidden");
 }
 
