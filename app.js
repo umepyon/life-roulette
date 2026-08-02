@@ -31,6 +31,40 @@ const STARTING_CASH = 120000;
 const GOAL_ID = "goal";
 const GIFT_AMOUNTS = { 1: 10000, 2: 20000, 3: 30000, 4: 50000, 5: 70000, 6: 100000 };
 const CASINO_LOSS_AMOUNT = -10000000;
+const CAREER_OPTIONS = Object.freeze([
+  Object.freeze({
+    id: "athlete",
+    title: "スポーツ選手",
+    detail: "チームとのプロ契約が決まり、競技に集中する",
+    fundingLabel: "契約金",
+    amount: 1200000,
+    icon: "🏅",
+  }),
+  Object.freeze({
+    id: "researcher",
+    title: "研究者",
+    detail: "研究プロジェクトが採択され、実験を始める",
+    fundingLabel: "研究費",
+    amount: 600000,
+    icon: "🔬",
+  }),
+  Object.freeze({
+    id: "it-founder",
+    title: "IT起業",
+    detail: "事業計画に賛同され、スタートアップを立ち上げる",
+    fundingLabel: "出資金",
+    amount: 2500000,
+    icon: "💡",
+  }),
+  Object.freeze({
+    id: "video-creator",
+    title: "動画配信者",
+    detail: "企画が話題になり、ファンから支援が集まる",
+    fundingLabel: "クラファン",
+    amount: 400000,
+    icon: "📹",
+  }),
+]);
 const MOBILE_LAYOUT_QUERY = "(max-width: 760px), (max-width: 900px) and (max-height: 500px)";
 const CPU_SPEEDS = {
   standard: { turn: 650, dialog: 850, roll: 520, step: 190, mobileStep: 330, result: 520 },
@@ -87,7 +121,7 @@ const LEGACY_SPACES = [
   {
     id: "dream-fork", label: "仕事・プロ", sub: "夢の仕事を選ぶ", icon: "🌟", type: "branch", grid: [10, 8],
     routeOptions: [
-      { title: "プロを目指す", detail: "スポーツ選手や芸能人など、特別な夢に挑戦する", next: "challenge-1", effect: "プロを目指す道を選んだ" },
+      { title: "プロを目指す", detail: "スポーツ選手や芸能人など、特別な夢に挑戦する", next: "challenge-1", effect: "プロを目指す道を選んだ", careerSelection: true },
       { title: "一般の仕事", detail: "安定した仕事で、堅実な人生を進む", next: "relax-1", effect: "一般の仕事を選んだ" },
     ],
   },
@@ -204,7 +238,7 @@ const BRANCH_DEFINITIONS = Object.freeze([
     sub: "夢の仕事を選ぶ",
     icon: "🌟",
     main: Object.freeze({ title: "一般の仕事", detail: "安定した仕事で、堅実な人生を進む", effect: "一般の仕事を選んだ" }),
-    branch: Object.freeze({ title: "プロを目指す", detail: "スポーツ選手や芸能人など、特別な夢に挑戦する", effect: "プロを目指す道を選んだ" }),
+    branch: Object.freeze({ title: "プロを目指す", detail: "スポーツ選手や芸能人など、特別な夢に挑戦する", effect: "プロを目指す道を選んだ", careerSelection: true }),
   }),
 ]);
 
@@ -698,7 +732,7 @@ function renderPlayers() {
       ${portraitMarkup(characterProfile(player.characterId), "player-avatar", `${player.name}のキャラクター`)}
       <div class="player-info">
         <div class="player-name"><span class="player-color" style="background:${player.color}"></span>${escapeHtml(player.name)} ${player.isComputer ? `<span class="cpu-badge">CPU</span>` : ""} ${player.finished ? `<span class="finish-badge">GOAL ${player.finishOrder}位</span>` : ""}</div>
-        <div class="player-job">夢：${escapeHtml(player.dreamJob)} · ${familySummary(player)}</div>
+        <div class="player-job">${player.career?.title ? `職業：${escapeHtml(player.career.title)}` : `夢：${escapeHtml(player.dreamJob)}`} · ${familySummary(player)}</div>
         <div class="player-remaining">${remainingStepsLabel(player)}</div>
       </div>
       <div class="player-money">${money(player.cash)}</div>
@@ -729,7 +763,7 @@ function renderCurrentPlayer() {
       </div>
       <span class="current-player-position">${player.steps} マス目</span>
     </div>
-    <div class="current-player-job">趣味：${escapeHtml(player.hobby)} · 夢：${escapeHtml(player.dreamJob)}<br />毎回の収入 ${money(player.salary)}</div>
+    <div class="current-player-job">趣味：${escapeHtml(player.hobby)} · ${player.career?.title ? `職業：${escapeHtml(player.career.title)}` : `夢：${escapeHtml(player.dreamJob)}`}<br />毎回の収入 ${money(player.salary)}</div>
     <div class="family-meter">${carMarkup(player)}<span>${familySummary(player)}</span></div>`;
   const course = activeCourse();
   const seedBadge = course.seed ? `<span class="course-seed" title="同じシードなら同じヘックスコースになります">${escapeHtml(course.sizeLabel || "ヘックスコース")} · HEX #${course.seed}</span>` : "";
@@ -827,6 +861,11 @@ function computerRouteChoiceIndex(space) {
   return Math.floor(Math.random() * space.routeOptions.length);
 }
 
+function computerCareerChoiceIndex(options) {
+  if (!options?.length) return 0;
+  return Math.floor(Math.random() * options.length);
+}
+
 function scheduleComputerTurn(kind = "turn") {
   const hasPendingComputerDialog = state.pendingEvent || state.pendingChoice || state.pendingGift || state.pendingGoalBonus;
   if (!state.soloMode || state.showingResults || (state.isBusy && !hasPendingComputerDialog)) return;
@@ -854,8 +893,12 @@ function runComputerAction() {
   }
   const pendingChoice = state.pendingChoice;
   if (pendingChoice && isComputerPlayer(pendingChoice.playerId)) {
-    const space = activeSpaceById(pendingChoice.spaceId);
-    chooseOption(computerRouteChoiceIndex(space));
+    if (pendingChoice.type === "career") {
+      chooseOption(computerCareerChoiceIndex(pendingChoice.options));
+    } else {
+      const space = activeSpaceById(pendingChoice.spaceId);
+      chooseOption(computerRouteChoiceIndex(space));
+    }
     return;
   }
   const pendingGift = state.pendingGift;
@@ -1084,7 +1127,7 @@ function startGame(event) {
     const profile = characterProfile(state.setupCharacters[index]);
     return {
       id: index, name, isComputer: state.soloMode && index > 0, characterId: profile.id, hobby: profile.hobby, dreamJob: profile.dreamJob, color: PLAYER_COLORS[index].value,
-      cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, spaceId: activeCourse().startId, steps: 0,
+      cash: STARTING_CASH, salary: 30000, job: `夢：${profile.dreamJob}`, career: null, spaceId: activeCourse().startId, steps: 0,
       routes: {}, pathHistory: [activeCourse().startId], skipTurns: 0, partner: false, children: 0, familyMilestones: [], finished: false, finishOrder: null,
     };
   });
@@ -1176,6 +1219,7 @@ function resetPlayerToStart(player) {
   player.pathHistory = [startId];
   player.salary = 30000;
   player.job = `夢：${profile.dreamJob}`;
+  player.career = null;
   player.skipTurns = 0;
   player.partner = false;
   player.children = 0;
@@ -1651,25 +1695,61 @@ function openRouteChoice(player, space) {
 function renderRouteChoice() {
   const pending = state.pendingChoice;
   const player = pending && state.players.find((entry) => entry.id === pending.playerId);
-  const space = pending && activeSpaceById(pending.spaceId);
-  if (!pending || !player || !space) return;
+  const isCareerChoice = pending?.type === "career";
+  const space = !isCareerChoice && pending ? activeSpaceById(pending.spaceId) : null;
+  if (!pending || !player || (!isCareerChoice && !space)) return;
   const canChoose = canControlPlayer(player.id);
-  elements.choiceTitle.textContent = space.label;
-  elements.choiceDescription.textContent = canChoose
-    ? `${player.name}、${space.sub}。どちらの道を進む？`
-    : `${player.name}さんが、別の端末で進路を選んでいます。`;
-  elements.choiceOptions.innerHTML = pending.options.map((option, index) => `<button class="choice-option route-option" type="button" data-choice-option="${index}" ${canChoose ? "" : "disabled"}><strong><span class="route-option-arrow">↗</span>${option.title}</strong><span>${option.detail}</span><em>このルートへ進む</em></button>`).join("");
+  if (isCareerChoice) {
+    elements.choiceTitle.textContent = "プロの職業を選ぼう";
+    elements.choiceDescription.textContent = canChoose
+      ? `${player.name}、4枚の職業カードから、挑戦する仕事を1つ選んでください。`
+      : `${player.name}さんが、別の端末で職業カードを選んでいます。`;
+    elements.choiceOptions.className = "choice-options career-options";
+    elements.choiceOptions.innerHTML = pending.options.map((option, index) => `<button class="choice-option career-option" type="button" data-choice-option="${index}" ${canChoose ? "" : "disabled"}><span class="career-option-icon" aria-hidden="true">${escapeHtml(option.icon || "✦")}</span><strong>${escapeHtml(option.title)}</strong><span>${escapeHtml(option.detail)}</span><em>${escapeHtml(option.fundingLabel || "支援金")} <b>${money(Number(option.amount) || 0)}</b></em></button>`).join("");
+  } else {
+    elements.choiceTitle.textContent = space.label;
+    elements.choiceDescription.textContent = canChoose
+      ? `${player.name}、${space.sub}。どちらの道を進む？`
+      : `${player.name}さんが、別の端末で進路を選んでいます。`;
+    elements.choiceOptions.className = "choice-options";
+    elements.choiceOptions.innerHTML = pending.options.map((option, index) => `<button class="choice-option route-option" type="button" data-choice-option="${index}" ${canChoose ? "" : "disabled"}><strong><span class="route-option-arrow">↗</span>${escapeHtml(option.title)}</strong><span>${escapeHtml(option.detail)}</span><em>このルートへ進む</em></button>`).join("");
+  }
   elements.choiceModal.classList.remove("is-hidden");
 }
 
 function chooseOption(index) {
   const pending = state.pendingChoice;
-  if (!pending || pending.type !== "route") return;
+  if (!pending || !["route", "career"].includes(pending.type)) return;
   const player = state.players.find((entry) => entry.id === pending.playerId);
   const option = pending.options[index];
   if (!player || !option) return;
+  if (pending.type === "career") {
+    const amount = Number(option.amount) || 0;
+    player.career = {
+      id: option.id,
+      title: option.title,
+      fundingLabel: option.fundingLabel,
+      amount,
+    };
+    player.job = option.title;
+    changeMoney(player, amount);
+    addFeed(`${player.name}は「${option.title}」を選び、${option.fundingLabel} ${money(amount)}を受け取った！`, "choice-dot");
+    state.pendingChoice = null;
+    elements.choiceModal.classList.add("is-hidden");
+    toast(`${option.title}に決定！ ${option.fundingLabel} ${money(amount)}を受け取りました。`);
+    finishTurn();
+    return;
+  }
   player.routes[pending.spaceId] = option.next;
   addFeed(`${player.name}は「${option.title}」を選んだ。`, "choice-dot");
+  if (option.careerSelection) {
+    state.pendingChoice = { type: "career", playerId: player.id, spaceId: pending.spaceId, options: CAREER_OPTIONS };
+    toast("プロの道を選びました。職業カードから1枚選んでください！");
+    renderRouteChoice();
+    publishOnlineState();
+    scheduleComputerTurn("dialog");
+    return;
+  }
   elements.choiceModal.classList.add("is-hidden");
   state.pendingChoice = null;
   toast(option.effect);
