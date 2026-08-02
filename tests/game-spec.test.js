@@ -22,6 +22,11 @@ for (const title of ["スポーツ選手", "研究者", "IT起業", "動画配�
 }
 assert.match(app, /pending\.type === "career"/, "career card selection must be a separate choice state");
 assert.match(app, /careerSelection: true/, "the pro branch must open career cards");
+assert.match(app, /const CAREER_RISK_EVENTS = Object\.freeze\(\{/, "pro branch must define career-specific risks");
+for (const title of ["怪我で入院", "研究が失敗", "盗作で訴えられる", "人気低迷"]) {
+  assert.match(app, new RegExp(title), `${title} career risk must exist`);
+}
+assert.match(app, /space\.type === "career-risk"/, "career risk spaces must resolve separately");
 assert.match(online, /data-online-start/, "online waiting room must expose a host start action");
 assert.match(online, /session\.started && session\.localPlayerId === playerId/, "online controls must stay disabled before start");
 assert.match(online, /canStartGame:\s*\(\) => session\.connected && session\.role === "host"/, "only an online host may start human multiplayer");

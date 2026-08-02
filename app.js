@@ -65,6 +65,32 @@ const CAREER_OPTIONS = Object.freeze([
     icon: "📹",
   }),
 ]);
+const CAREER_RISK_EVENTS = Object.freeze({
+  athlete: Object.freeze({
+    title: "怪我で入院",
+    description: "試合中の怪我で入院。治療費とリハビリ費用がかかりました。",
+    amount: -300000,
+    icon: "🏥",
+  }),
+  researcher: Object.freeze({
+    title: "研究が失敗",
+    description: "大切な実験が失敗。再実験のための研究費を負担しました。",
+    amount: -200000,
+    icon: "🔬",
+  }),
+  "it-founder": Object.freeze({
+    title: "盗作で訴えられる",
+    description: "サービスの盗作を訴えられ、弁護士費用と和解金を支払いました。",
+    amount: -1000000,
+    icon: "⚖️",
+  }),
+  "video-creator": Object.freeze({
+    title: "人気低迷",
+    description: "動画の再生数が落ち込み、企画と機材の立て直し費用がかかりました。",
+    amount: -100000,
+    icon: "📉",
+  }),
+});
 const MOBILE_LAYOUT_QUERY = "(max-width: 760px), (max-width: 900px) and (max-height: 500px)";
 const CPU_SPEEDS = {
   standard: { turn: 650, dialog: 850, roll: 520, step: 190, mobileStep: 330, result: 520 },
@@ -125,7 +151,7 @@ const LEGACY_SPACES = [
       { title: "一般の仕事", detail: "安定した仕事で、堅実な人生を進む", next: "relax-1", effect: "一般の仕事を選んだ" },
     ],
   },
-  { id: "challenge-1", label: "大きな挑戦", sub: "勝負", icon: "⚡", type: "chance", grid: [9, 7], next: "challenge-2" },
+  { id: "challenge-1", label: "プロの試練", sub: "職業ごとのリスク", icon: "⚠️", type: "career-risk", grid: [9, 7], next: "challenge-2" },
   { id: "challenge-2", label: "新プロジェクト", sub: "チャンス", icon: "🛠", type: "event", amount: 25000, grid: [9, 6], next: "challenge-3" },
   { id: "challenge-3", label: "ごほうび旅行", sub: "思い出", icon: "🌴", type: "event", amount: -12000, grid: [10, 5], next: "challenge-4" },
   { id: "challenge-4", label: "大成功！", sub: "大金を獲得", icon: "🏅", type: "event", amount: 40000, eventScene: "success", grid: [11, 4], next: "last-join" },
@@ -250,7 +276,7 @@ function branchRouteEvent(branchIndex, routeIndex) {
     return { label: "初任給", sub: "はじめての給料", description: "働き始めて、はじめての給料を受け取りました。", amount: 30000, icon: "💴", type: "money" };
   }
   if (routeIndex === 1 && branchIndex === 2) {
-    return { label: "プロのオーディション", sub: "特別な挑戦", description: "プロへの道を目指して、最初の審査に挑みました。", amount: -8000, icon: "🎤", type: "event", eventScene: "success" };
+    return { label: "プロの試練", sub: "職業ごとのリスク", description: "選んだ職業ならではの試練が待っています。", icon: "⚠️", type: "career-risk" };
   }
   if (routeIndex === 2 && branchIndex === 2) {
     return { label: "才能を磨く", sub: "プロへの努力", description: "夢をかなえるために、厳しい練習を続けました。", amount: -10000, icon: "🏅", type: "event", eventScene: "success" };
@@ -1241,6 +1267,21 @@ function swapPlayerPositions(player, leader) {
 }
 
 function resolveSpecialSpace(player, space) {
+  if (space.type === "career-risk") {
+    const risk = CAREER_RISK_EVENTS[player.career?.id];
+    if (!risk) return false;
+    changeMoney(player, risk.amount);
+    addFeed(`${player.name}：${risk.title} ${money(risk.amount)}`, "negative");
+    render();
+    return openLifeEvent(player, {
+      scene: "card",
+      title: risk.title,
+      amount: risk.amount,
+      icon: risk.icon,
+      description: `${player.name}は「${risk.title}」。${risk.description}`,
+    });
+  }
+
   if (space.type === "move-back") {
     const actualSteps = movePlayerBack(player, space.moveBack || 3);
     const detail = actualSteps ? `${actualSteps}マスもどって、もう一度やり直しです。` : "START地点のため、これ以上はもどれません。";
