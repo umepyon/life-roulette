@@ -1546,7 +1546,7 @@ function rollGoalBonus() {
   bonus.roll = Math.floor(Math.random() * 6) + 1;
   renderGoalBonus();
   publishOnlineState();
-  window.setTimeout(settleGoalBonus, cpuTiming("result", 520, player.id));
+  window.setTimeout(settleGoalBonus, cpuTiming("result", 520, bonus.playerId));
 }
 
 function settleGoalBonus() {

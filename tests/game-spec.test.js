@@ -8,11 +8,13 @@ const online = fs.readFileSync(path.join(root, "online.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
 const resetBlock = app.match(/function resetPlayerToStart\(player\) \{([\s\S]*?)\n\}/)?.[1] || "";
+const goalBonusBlock = app.match(/function rollGoalBonus\(\) \{([\s\S]*?)\n\}/)?.[1] || "";
 for (const field of ["player.salary = 30000", "player.job =", "player.partner = false", "player.children = 0", "player.familyMilestones = []", "player.routes = {}"]) {
   assert.match(resetBlock, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `reset must clear ${field}`);
 }
 
 assert.match(app, /const CPU_SPEEDS = \{[\s\S]*?standard:[\s\S]*?fast:[\s\S]*?instant:/, "CPU speed presets must exist");
+assert.match(goalBonusBlock, /cpuTiming\("result", 520, bonus\.playerId\)/, "goal bonus timing must use the pending player's id");
 assert.match(app, /gift\.payments\.push\(/, "gift payments must be collected for the summary");
 assert.match(online, /data-online-start/, "online waiting room must expose a host start action");
 assert.match(online, /session\.started && session\.localPlayerId === playerId/, "online controls must stay disabled before start");
